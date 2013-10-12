@@ -21,6 +21,15 @@ UI.noConflict = function () {
 
 };
 
+UI.create = function (definition) {
+
+	return UI[
+		typeof definition.component === 'string' ? 'obj' : 'dom'
+	].create(definition);
+
+};
+
+
 // Utilities for objects.
 
 UI.obj = {};
@@ -42,7 +51,7 @@ UI.obj.create = function (definition) {
 
 UI.obj.declare = function (class_name, decorator){
 
-	return UI[class_name] = UI.obj.define(class_name, decorator);
+	return UI[class_name] = UI.obj.define.apply(this, arguments);
 
 };
 
@@ -61,9 +70,11 @@ UI.obj.define = function (class_name, decorator) {
 
 
 	if (arguments.length === 3) {
-		var beforeDecorator = decorator;
+		var Super = decorator;
 
-		beforeDecorator(Constructor);
+		Constructor.prototype = Object.create(Super.prototype || Super, {
+			constructor: {value: Constructor}
+		});
 
 		decorator = arguments[2];
 	}
@@ -165,6 +176,19 @@ UI.obj.mixin = function (receiver) {
 UI.dom = {};
 
 
+UI.dom.query = function (selector, element) {
+
+	element = element || document;
+
+
+	var matches = element.querySelectorAll(selector);
+
+
+	return Array.prototype.slice.call(matches, 0);
+
+};
+
+
 UI.dom.closest = function (element, matcher) {
 
 	var matched;
@@ -193,6 +217,9 @@ UI.dom.trigger = function (element, event_name, event_data) {
 
 	element.dispatchEvent(event);
 
+
+	return event;
+
 };
 
 
@@ -203,7 +230,7 @@ UI.dom.create = function (element) {
 	}
 
 
-	if (element && element.nodeType) {
+	if (element.nodeType) {
 		return element;
 	}
 
@@ -298,6 +325,14 @@ UI.dom.update = function (element, definition) {
 		element.innerHTML = definition.html;
 	}
 
+	if (definition.before) {
+		UI.dom.before(element, definition.before);
+	}
+
+	if (definition.after) {
+		UI.dom.after(element, definition.after);
+	}
+
 	if (definition.parent) {
 		UI.dom.parent(element, definition.parent);
 	}
@@ -362,6 +397,33 @@ UI.dom.names = function (element, names) {
 	}
 
 	element.classList.add.apply(element.classList, names);
+
+};
+
+
+UI.dom.before = function (element, before) {
+
+	if (typeof before === 'string') {
+		before = document.querySelector(before);
+	}
+
+
+	var parent = before.parentNode;
+
+	if (parent && parent.insertBefore) {
+		parent.insertBefore(element, before);
+	}
+
+};
+
+
+UI.dom.after = function (element, after) {
+
+	if (after.nextSibling) {
+		return UI.dom.before(element, after.nextSibling);
+	}
+
+	UI.dom.parent(element, after.parentNode);
 
 };
 
@@ -462,21 +524,42 @@ UI.dom.events.remove.all = function (element, events, use_capture) {
 
 	events.forEach(function (event_name) {
 
-		UI.dom.events.remove.some(element, event_cache[event_name], use_capture);
+		UI.dom.events.remove.some(element, event_name, event_cache[event_name], use_capture);
 
 	});
 
 };
 
 
-UI.dom.events.remove.some = function (element, event_handlers, use_capture) {
+UI.dom.events.remove.some = function (element, event_name, event_handlers, use_capture) {
 
 	if (!event_handlers) return;
+
+
+	if (!Array.isArray(event_handlers)) {
+		event_handlers = [event_handlers]
+	}
 
 
 	event_handlers.forEach(function (eventHandler) {
 
 		element.removeEventListener(event_name, eventHandler, use_capture);
+
+		var event_cache = element.events;
+
+		if (event_cache) {
+			if (use_capture) event_cache = event_cache.capture;
+
+			event_cache = event_cache[event_name];
+
+			if (event_cache) {
+				var index = event_cache.indexOf(eventHandler);
+
+				if (index !== -1) {
+					event_cache.splice(index, 1);
+				}
+			}
+		}
 
 	});
 
@@ -497,18 +580,9 @@ UI.dom.remove = function (element) {
 
 };
 
-
-UI.obj.declare('AutoComplete', function () {
-
-	this.default_options = {};
-
-});
-
 UI.obj.declare('Button', function () {
 
 	this.default_options = {
-		loadingText: 'loading...',
-
 		element: {
 			tag: 'button',
 			names: 'btn btn-default',
@@ -567,13 +641,13 @@ UI.obj.declare('Button', function () {
 
 			this._state_ = state;
 
-			var dataStateAttr = state + 'Text';
+			var data_state_attr = state + 'Text';
 
 			if (!this.element.dataset.resetText) {
 				this.element.dataset.resetText = this.value;
 			}
 
-			this.value = this.element.dataset[dataStateAttr] || this.options[dataStateAttr];
+			this.value = this.element.dataset[data_state_attr] || this.options[data_state_attr];
 
 			setTimeout(this.updateState.bind(this), 0);
 
@@ -623,33 +697,33 @@ UI.obj.declare('Button', function () {
 
 	this.handleGroupedButtonToggles = function () {
 
-		var buttonGroupParent = this.utils.closest(
+		var button_group_parent = UI.dom.closest(
 			this.element,
 			this.buttonGroupParentCheck.bind(this)
 		);
 
-		if (!buttonGroupParent) return;
+		if (!button_group_parent) return;
 
 		
-		var buttonInput = this.element.querySelector('input');
+		var button_input = this.element.querySelector('input');
 
-		if (!buttonInput) return;
+		if (!button_input) return;
 
 
-		var checked = (buttonInput.getAttribute('checked') === 'checked') ?
+		var checked = (button_input.getAttribute('checked') === 'checked') ?
 			'' :
 			'checked';
 
-		buttonInput.setAttribute('checked', checked);
+		button_input.setAttribute('checked', checked);
 
-		this.utils.trigger(buttonInput, 'change');
+		UI.dom.trigger(button_input, 'change');
 
 
-		if (buttonInput.getAttribute('type') !== 'radio') return;
+		if (button_input.getAttribute('type') !== 'radio') return;
 
-		var buttonSiblings = buttonGroupParent.querySelectorAll( '.active');
+		var button_siblings = UI.dom.query('.active', buttonGroupParent);
 
-		buttonSiblings.forEach(this.deactivateSibling.bind(this));
+		button_siblings.forEach(this.deactivateSibling.bind(this));
 
 	};
 
@@ -669,48 +743,7 @@ UI.obj.declare('Button', function () {
 
 });
 
-UI.obj.declare('ContextMenu', function () {
-
-	this.default_options = {};
-
-
-	this.setupEvents = function () {
-
-		this.element.addEventListener('keydown', this.onKeyDown.bind(this));
-
-	};
-
-	this.removeEvents = function () {
-
-		this.element.removeEventListener('keydown', this.onKeyDown);
-
-	};
-
-
-	this.onKeyDown = function (event) {
-
-		event;
-
-	};
-
-});
-
-UI.obj.declare('GhostDom', function () {
-
-	this.default_options = {};
-
-});
-
-UI.obj.declare('Layout', function () {
-
-	this.default_options = {};
-
-});
-
 UI.obj.declare('Menu', function () {
-
-	this.constructor.id = this.constructor.id || 0;
-
 
 	this.default_options = {
 		element: {
@@ -726,26 +759,17 @@ UI.obj.declare('Menu', function () {
 
 	this.initialize = function () {
 
-		this.id = this.constructor.id++;
-
 		this.menu_element = this.element.firstChild;
-
-
-		UI.dom.update(this.menu_element, {
-			attrs: {'aria-labelledby': 'dropdownMenu' + this.id}
-		});
 
 
 		var options = this.options.options;
 
-		if (!options) return;
+		if (options) {
+			options.forEach(this.addOption.bind(this));
+		}
 
 
-		options.forEach(function (params) {
-
-			this.addOption(params);
-
-		}.bind(this));
+		this.setupToggle(this.options.toggle || {});
 
 	};
 
@@ -757,13 +781,46 @@ UI.obj.declare('Menu', function () {
 		}
 
 
+		return this.constructMenuItem(params);
+
+	};
+
+
+	this.addDivider = function () {
+
+		return UI.dom.construct({
+			parent: this.menu_element,
+			names: 'divider',
+			attrs: {role: 'presentation'},
+			tag: 'li'
+		});
+
+	};
+
+
+	this.constructMenuItem = function (params) {
+
 		if (params.action && !params.children) {
 			params.children = [params.action];
+
+			var action = params.action,
+			    attrs = action.attributes || action.attrs;
+
+			action.tag = action.tag || 'a';
+
+			if (!attrs) attrs = action.attrs = {};
+
+			attrs.href = attrs.href || '#';
+
+			attrs.role = 'menuitem';
+
+			attrs.tabindex =  '-1';
 
 			delete params.action;
 		}
 
-		UI.dom.construct(UI.obj.mixin({
+
+		return UI.dom.construct(UI.obj.mixin({
 			parent: this.menu_element,
 			attrs: {role: 'presentation'},
 			tag: 'li'
@@ -772,38 +829,257 @@ UI.obj.declare('Menu', function () {
 	};
 
 
-	this.addDivider = function () {
+	this.setupToggle = function (element) {
 
-		UI.dom.construct({
-			parent: this.menu_element,
-			names: 'divider',
-			attrs: {role: 'presentation'},
-			tag: 'li'
+		this.toggle_element = UI.dom.create(element);
+
+
+		this.toggle_element.menu = this;
+
+
+		UI.dom.update(this.toggle_element, {
+			data: {toggle: 'dropdown'},
+			names: 'dropdown-toggle',
+			events: {click: this.onToggle.bind(this)},
+			before: this.menu_element
 		});
 
-	}
+	};
+
+
+	this.setupAutoHide = function () {
+
+		this.auto_hide_events = this.auto_hide_events || {
+			click: this.hideAll.bind(this)
+		};
+
+
+		UI.dom.events(document, this.auto_hide_events);
+
+	};
+
+
+	this.removeAutoHide = function () {
+
+		UI.dom.events.remove(document, this.auto_hide_events);
+
+	};
+
+
+	this.setupKeydown = function () {
+
+		this.keydown_events = this.keydown_events || {
+			keydown: this.onKeydown.bind(this)
+		};
+
+
+		UI.dom.events(document, this.keydown_events);
+
+	};
+
+
+	this.removeKeydown = function () {
+
+		UI.dom.events.remove(document, this.keydown_events);
+
+	};
+
+
+	Object.defineProperty(this, 'isActive', {
+		get: function () {
+
+			return this.element.classList.contains('open');
+
+		}
+	});
+
+
+	Object.defineProperty(this, 'isDisabled', {
+		get: function () {
+
+			return this.element.classList.contains('disabled') || this.element.disabled;
+
+		}
+	});
+
+
+	this.hideAll = function () {
+
+		var all_toggle_elements = UI.dom.query('[data-toggle=dropdown]');
+
+		all_toggle_elements.forEach(function (toggle_element) {
+
+			var menu = toggle_element.menu;
+
+			if (menu) menu.hide();
+
+		});
+
+	};
+
+
+	this.hide = function () {
+
+		if (!this.isActive) return;
+
+		var event = UI.dom.trigger(this.element, 'hide');
+
+		if (event.defaultPrevented) return;
+
+		this.element.classList.remove('open');
+
+		this.removeAutoHide();
+
+		this.removeKeydown();
+
+		UI.dom.trigger(this.element, 'hidden');
+
+	};
+
+
+	this.show = function () {
+
+		var event = UI.dom.trigger(this.element, 'show');
+
+		if (event.defaultPrevented) return;
+
+		this.element.classList.add('open');
+
+		this.setupAutoHide();
+
+		this.setupKeydown();
+
+		UI.dom.trigger(this.element, 'shown');
+
+		if (this.toggle_element) {
+			this.toggle_element.focus();
+		}
+
+	};
+
+
+	this.onToggle = function (event) {
+
+		if (this.isDisabled) return;
+
+		var isActive = this.isActive;
+
+		this.hideAll();
+
+		if (!isActive) {
+			event.stopPropagation();
+
+			this.show();
+		}
+
+		event.preventDefault();
+
+		return false;
+
+	};
+
+
+	this.onKeydown = function (event) {
+
+		if (!/(38|40|27)/.test(event.keyCode)) return;
+
+
+		event.preventDefault();
+
+		event.stopPropagation();
+
+
+		if (this.isDisabled) return;
+
+
+		if (!this.isActive || (this.isActive && event.keyCode === 27)) {
+			if (event.which === 27) {
+				UI.dom.trigger(this.toggle_element, 'click');
+
+				this.toggle_element.focus();
+			}
+
+			return UI.dom.trigger(this.element, 'click');
+		}
+
+
+		var items = UI.dom.query('[role=menu] li:not(.divider) a', this.element);
+
+		if (!items.length) return;
+
+
+		var index = items.indexOf(document.activeElement),
+				end = items.length - 1;
+
+
+		if (event.keyCode == 38 && index > 0)   index--; // Up
+
+		if (event.keyCode == 40 && index < end) index++; // Down
+
+		if (index === -1) index = 0;
+
+
+		items[index].focus();
+
+	};
+
+});
+
+UI.obj.declare('ContextMenu', UI.Menu, function () {
+
+	var super_initialize = this.initialize;
+
+	this.initialize = function () {
+
+		super_initialize.call(this)
+
+		if (this.options.context) {
+			this.setupContext(this.options.context);
+		}
+
+	};
+
+
+	this.setupContext = function (context_element) {
+
+		if (this.context_element) this.removeContext();
+
+		this.context_element = context_element;
+
+	};
+
+
+	this.removeContext = function () {
+
+	};
+
+});
+
+UI.obj.declare('AutoComplete', function () {
+
+	this.default_options = {};
+
+});
+
+UI.obj.declare('FileList', function () {
+
+	this.default_options = {};
+
+});
+
+UI.obj.declare('GhostDom', function () {
+
+	this.default_options = {};
+
+});
+
+UI.obj.declare('Layout', function () {
+
+	this.default_options = {};
 
 });
 
 UI.obj.declare('Modal', function () {
-
-	this.default_options = {};
-
-});
-
-UI.obj.declare('NestedMenu', function () {
-
-	this.default_options = {};
-
-});
-
-UI.obj.declare('Resizable', function () {
-
-	this.default_options = {};
-
-});
-
-UI.obj.declare('Search', function () {
 
 	this.default_options = {};
 

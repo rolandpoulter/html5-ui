@@ -1,3 +1,12 @@
+UI.create = function (definition) {
+
+	return UI[
+		typeof definition.component === 'string' ? 'obj' : 'dom'
+	].create(definition);
+
+};
+
+
 // Utilities for objects.
 
 UI.obj = {};
@@ -38,9 +47,11 @@ UI.obj.define = function (class_name, decorator) {
 
 
 	if (arguments.length === 3) {
-		var beforeDecorator = decorator;
+		var Super = decorator;
 
-		beforeDecorator(Constructor);
+		Constructor.prototype = Object.create(Super.prototype || Super, {
+			constructor: {value: Constructor}
+		});
 
 		decorator = arguments[2];
 	}
@@ -196,7 +207,7 @@ UI.dom.create = function (element) {
 	}
 
 
-	if (element && element.nodeType) {
+	if (element.nodeType) {
 		return element;
 	}
 
@@ -511,6 +522,22 @@ UI.dom.events.remove.some = function (element, event_name, event_handlers, use_c
 
 		element.removeEventListener(event_name, eventHandler, use_capture);
 
+		var event_cache = element.events;
+
+		if (event_cache) {
+			if (use_capture) event_cache = event_cache.capture;
+
+			event_cache = event_cache[event_name];
+
+			if (event_cache) {
+				var index = event_cache.indexOf(eventHandler);
+
+				if (index !== -1) {
+					event_cache.splice(index, 1);
+				}
+			}
+		}
+
 	});
 
 };
@@ -529,4 +556,3 @@ UI.dom.remove = function (element) {
 	element.childNodes.forEach(UI.dom.remove);
 
 };
-

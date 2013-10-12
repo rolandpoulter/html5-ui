@@ -13,7 +13,15 @@ module.exports = function (grunt) {
 
 		concat: {
 			dist: {
-				src: ['src/index.js', 'src/utils.js', 'src/**/*.js'],
+				src: [
+					'src/index.js',
+					'src/utils.js',
+					'src/button.js',
+					'src/menu.js',
+					'src/nested_menu.js',
+					'src/context_menu.js',
+					'src/**/*.js'
+				],
       	dest: 'dist/<%= package.name %>-<%= package.version %>.js',
 			},
 			test: {

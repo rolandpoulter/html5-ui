@@ -1,4 +1,4 @@
-var button_group = UI.dom.create({
+var button_group = UI.create({
 	names: 'btn-group',
 	parent: page,
 	children: [{
@@ -9,38 +9,29 @@ var button_group = UI.dom.create({
 	}]
 });
 
-var button_left = new UI.Button({
+var button_left = new UI.create({
+	component: 'Button',
 	element: {
-		text: 'Middle Left',
-		parent: button_group
-	}
-});
-
-var button_middle = new UI.Button({
-	element: {
-		text: 'Middle Right',
-		parent: button_group
-	}
-});
-
-var button_right = new UI.Button({
-	element: {
-		text: 'Right',
+		text: 'Middle',
 		parent: button_group
 	}
 });
 
 var menu = new UI.Menu({
 	element: {
-		parent: page
+		names: 'btn-group',
+		parent: button_group
 	},
 	options: [
-		{action: {tag: 'a', attrs: {role: 'menuitem', tabindex: '-1', href: '#'}, text: 'Action'}},
-		{action: {tag: 'a', attrs: {role: 'menuitem', tabindex: '-1', href: '#'}, text: 'Another Action'}},
-		{action: {tag: 'a', attrs: {role: 'menuitem', tabindex: '-1', href: '#'}, text: 'Something else here'}},
+		{action: {text: 'Action'}},
+		{action: {text: 'Another Action'}},
+		{action: {text: 'Something else here'}},
 		{divider: true},
-		{action: {tag: 'a', attrs: {role: 'menuitem', tabindex: '-1', href: '#'}, text: 'Separated link'}}
-	]
+		{names: 'dropdown-header', text: 'Other'},
+		{action: {text: 'Separated link'}}
+	],
+	toggle: {
+		component: 'Button',
+		element: {text: 'Right ', children: [{names: 'caret'}]}
+	}
 });
-
-menu.element.classList.add('open', 'clearfix');

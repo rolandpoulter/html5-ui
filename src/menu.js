@@ -24,9 +24,7 @@ UI.obj.declare('Menu', function () {
 		}
 
 
-		if (this.options.toggle) {
-			this.setupToggle(this.options.toggle);
-		}
+		this.setupToggle(this.options.toggle || {});
 
 	};
 
@@ -38,30 +36,50 @@ UI.obj.declare('Menu', function () {
 		}
 
 
-		if (params.action && !params.children) {
-			params.children = [params.action];
-
-			delete params.action;
-		}
-
-
-		UI.dom.construct(UI.obj.mixin({
-			parent: this.menu_element,
-			attrs: {role: 'presentation'},
-			tag: 'li'
-		}, params));
+		return this.constructMenuItem(params);
 
 	};
 
 
 	this.addDivider = function () {
 
-		UI.dom.construct({
+		return UI.dom.construct({
 			parent: this.menu_element,
 			names: 'divider',
 			attrs: {role: 'presentation'},
 			tag: 'li'
 		});
+
+	};
+
+
+	this.constructMenuItem = function (params) {
+
+		if (params.action && !params.children) {
+			params.children = [params.action];
+
+			var action = params.action,
+			    attrs = action.attributes || action.attrs;
+
+			action.tag = action.tag || 'a';
+
+			if (!attrs) attrs = action.attrs = {};
+
+			attrs.href = attrs.href || '#';
+
+			attrs.role = 'menuitem';
+
+			attrs.tabindex =  '-1';
+
+			delete params.action;
+		}
+
+
+		return UI.dom.construct(UI.obj.mixin({
+			parent: this.menu_element,
+			attrs: {role: 'presentation'},
+			tag: 'li'
+		}, params));
 
 	};
 
@@ -76,6 +94,7 @@ UI.obj.declare('Menu', function () {
 
 		UI.dom.update(this.toggle_element, {
 			data: {toggle: 'dropdown'},
+			names: 'dropdown-toggle',
 			events: {click: this.onToggle.bind(this)},
 			before: this.menu_element
 		});
@@ -90,14 +109,14 @@ UI.obj.declare('Menu', function () {
 		};
 
 
-		UI.dom.events(document.body, this.auto_hide_events);
+		UI.dom.events(document, this.auto_hide_events);
 
 	};
 
 
 	this.removeAutoHide = function () {
 
-		UI.dom.events.remove(document.body, this.auto_hide_events);
+		UI.dom.events.remove(document, this.auto_hide_events);
 
 	};
 
@@ -109,14 +128,14 @@ UI.obj.declare('Menu', function () {
 		};
 
 
-		UI.dom.events(document.body, this.keydown_events);
+		UI.dom.events(document, this.keydown_events);
 
 	};
 
 
 	this.removeKeydown = function () {
 
-		UI.dom.events.remove(document.body, this.keydown_events);
+		UI.dom.events.remove(document, this.keydown_events);
 
 	};
 
