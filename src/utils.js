@@ -19,7 +19,7 @@ UI.obj.create = function (definition) {
 
 UI.obj.declare = function (class_name, decorator){
 
-	return UI[class_name] = UI.obj.define(class_name, decorator);
+	return UI[class_name] = UI.obj.define.apply(this, arguments);
 
 };
 
@@ -142,6 +142,19 @@ UI.obj.mixin = function (receiver) {
 UI.dom = {};
 
 
+UI.dom.query = function (selector, element) {
+
+	element = element || document;
+
+
+	var matches = element.querySelectorAll(selector);
+
+
+	return Array.prototype.slice.call(matches, 0);
+
+};
+
+
 UI.dom.closest = function (element, matcher) {
 
 	var matched;
@@ -169,6 +182,9 @@ UI.dom.trigger = function (element, event_name, event_data) {
 
 
 	element.dispatchEvent(event);
+
+
+	return event;
 
 };
 
@@ -275,6 +291,14 @@ UI.dom.update = function (element, definition) {
 		element.innerHTML = definition.html;
 	}
 
+	if (definition.before) {
+		UI.dom.before(element, definition.before);
+	}
+
+	if (definition.after) {
+		UI.dom.after(element, definition.after);
+	}
+
 	if (definition.parent) {
 		UI.dom.parent(element, definition.parent);
 	}
@@ -339,6 +363,33 @@ UI.dom.names = function (element, names) {
 	}
 
 	element.classList.add.apply(element.classList, names);
+
+};
+
+
+UI.dom.before = function (element, before) {
+
+	if (typeof before === 'string') {
+		before = document.querySelector(before);
+	}
+
+
+	var parent = before.parentNode;
+
+	if (parent && parent.insertBefore) {
+		parent.insertBefore(element, before);
+	}
+
+};
+
+
+UI.dom.after = function (element, after) {
+
+	if (after.nextSibling) {
+		return UI.dom.before(element, after.nextSibling);
+	}
+
+	UI.dom.parent(element, after.parentNode);
 
 };
 
@@ -439,16 +490,21 @@ UI.dom.events.remove.all = function (element, events, use_capture) {
 
 	events.forEach(function (event_name) {
 
-		UI.dom.events.remove.some(element, event_cache[event_name], use_capture);
+		UI.dom.events.remove.some(element, event_name, event_cache[event_name], use_capture);
 
 	});
 
 };
 
 
-UI.dom.events.remove.some = function (element, event_handlers, use_capture) {
+UI.dom.events.remove.some = function (element, event_name, event_handlers, use_capture) {
 
 	if (!event_handlers) return;
+
+
+	if (!Array.isArray(event_handlers)) {
+		event_handlers = [event_handlers]
+	}
 
 
 	event_handlers.forEach(function (eventHandler) {

@@ -1,8 +1,6 @@
 UI.obj.declare('Button', function () {
 
 	this.default_options = {
-		loadingText: 'loading...',
-
 		element: {
 			tag: 'button',
 			names: 'btn btn-default',
@@ -61,13 +59,13 @@ UI.obj.declare('Button', function () {
 
 			this._state_ = state;
 
-			var dataStateAttr = state + 'Text';
+			var data_state_attr = state + 'Text';
 
 			if (!this.element.dataset.resetText) {
 				this.element.dataset.resetText = this.value;
 			}
 
-			this.value = this.element.dataset[dataStateAttr] || this.options[dataStateAttr];
+			this.value = this.element.dataset[data_state_attr] || this.options[data_state_attr];
 
 			setTimeout(this.updateState.bind(this), 0);
 
@@ -117,33 +115,33 @@ UI.obj.declare('Button', function () {
 
 	this.handleGroupedButtonToggles = function () {
 
-		var buttonGroupParent = this.utils.closest(
+		var button_group_parent = UI.dom.closest(
 			this.element,
 			this.buttonGroupParentCheck.bind(this)
 		);
 
-		if (!buttonGroupParent) return;
+		if (!button_group_parent) return;
 
 		
-		var buttonInput = this.element.querySelector('input');
+		var button_input = this.element.querySelector('input');
 
-		if (!buttonInput) return;
+		if (!button_input) return;
 
 
-		var checked = (buttonInput.getAttribute('checked') === 'checked') ?
+		var checked = (button_input.getAttribute('checked') === 'checked') ?
 			'' :
 			'checked';
 
-		buttonInput.setAttribute('checked', checked);
+		button_input.setAttribute('checked', checked);
 
-		this.utils.trigger(buttonInput, 'change');
+		UI.dom.trigger(button_input, 'change');
 
 
-		if (buttonInput.getAttribute('type') !== 'radio') return;
+		if (button_input.getAttribute('type') !== 'radio') return;
 
-		var buttonSiblings = buttonGroupParent.querySelectorAll( '.active');
+		var button_siblings = UI.dom.query('.active', buttonGroupParent);
 
-		buttonSiblings.forEach(this.deactivateSibling.bind(this));
+		button_siblings.forEach(this.deactivateSibling.bind(this));
 
 	};
 
