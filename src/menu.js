@@ -105,7 +105,7 @@ UI.obj.declare('Menu', function () {
 	this.setupAutoHide = function () {
 
 		this.auto_hide_events = this.auto_hide_events || {
-			click: this.hideAll.bind(this)
+			mousedown: this.hideAll.bind(this)
 		};
 
 
@@ -236,7 +236,7 @@ UI.obj.declare('Menu', function () {
 
 	this.onKeydown = function (event) {
 
-		if (!/(38|40|27)/.test(event.keyCode)) return;
+		if ([38, 40, 27, 13].indexOf(event.keyCode) === -1) return;
 
 
 		event.preventDefault();
@@ -247,7 +247,9 @@ UI.obj.declare('Menu', function () {
 		if (this.isDisabled) return;
 
 
-		if (!this.isActive || (this.isActive && event.keyCode === 27)) {
+		var isActive = this.isActive;
+
+		if (!isActive || (isActive && event.keyCode === 27)) {
 			if (event.which === 27) {
 				UI.dom.trigger(this.toggle_element, 'click');
 
@@ -263,9 +265,14 @@ UI.obj.declare('Menu', function () {
 		if (!items.length) return;
 
 
-		var index = items.indexOf(document.activeElement),
-				end = items.length - 1;
+		var selected = this.element.querySelector('li a:focus'),
+		    index = items.indexOf(selected),
+		    end = items.length - 1;
 
+
+		if (event.keyCode === 13) {
+			return UI.dom.trigger(selected, 'click');
+		}
 
 		if (event.keyCode == 38 && index > 0)   index--; // Up
 

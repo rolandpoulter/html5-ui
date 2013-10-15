@@ -15,11 +15,9 @@ module.exports = function (grunt) {
 			dist: {
 				src: [
 					'src/index.js',
-					'src/utils.js',
-					'src/button.js',
+					'src/obj.js',
+					'src/dom.js',
 					'src/menu.js',
-					'src/nested_menu.js',
-					'src/context_menu.js',
 					'src/**/*.js'
 				],
       	dest: 'dist/<%= package.name %>-<%= package.version %>.js',
@@ -32,11 +30,25 @@ module.exports = function (grunt) {
 
 		test_runner: {
 			server: 'test/server'
-		}
+		},
+
+		watch: {
+			dist: {
+				files: './src/**/*.js',
+				options: {interrupt: true, atBegin: true, spawn: true},
+				tasks: ['dist']
+			},
+      test: {
+        files: './test/specs/**/*.js',
+        options: {interrupt: true, atBegin: true, spawn: true},
+        tasks: ['clean:test', 'concat:test']
+      }
+    }
 	});
 
 	this.loadNpmTasks('grunt-contrib-clean');
 	this.loadNpmTasks('grunt-contrib-concat');
+	this.loadNpmTasks('grunt-contrib-watch');
 
 	this.loadTasks('tasks');
 
