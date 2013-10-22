@@ -3,8 +3,7 @@
 // Reasons this library was created, instead of using jQuery or another?
 // 1) Only intended to support modern browsers and jQuery is too bloated.
 // 2) Other libraries were also to large or they didn't focus on the requirements.
-// 3) Others, used spaces instead of tabs, or just could not find something nice
-//    no matter how much I googled. Also, I'm a control freak, so go **** yourself! :P
+
 
 UI.dom = {};
 
@@ -50,7 +49,7 @@ UI.dom.closest = function (element, matcher) {
 		// Invoke the matcher function every time, if it
 		// returns a truthy value then a match has been found.
 
-		if (matcher(parent)) matched = parent;
+		if (matcher(element)) matched = element;
 
 		element = element.parentNode;
 
@@ -75,9 +74,16 @@ UI.dom.trigger = function (element, event_name, event_data) {
 	}
 
 
-	var event = event_data ?
-		new CustomEvent(event_name, event_data) :
-		new Event(event_name);
+	// Make cancelable default to true.
+
+	event_data = event_data || {};
+
+	if (event_data.cancelable === undefined) {
+		event_data.cancelable = true;
+	}
+
+
+	var event = new CustomEvent(event_name, event_data);
 
 
 	element.dispatchEvent(event);
@@ -637,7 +643,7 @@ UI.dom.events.remove.all = function (element, events, use_capture) {
 
 UI.dom.events.remove.some = function (element, event_name, event_handlers, use_capture) {
 
-	if (!event_handlers) return;
+	if (!event_handlers || event_name === 'capture') return;
 
 
 	// Sometimes event_handlers is just a single event handler,

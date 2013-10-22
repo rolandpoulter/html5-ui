@@ -241,32 +241,38 @@ UI.obj.mixin = function (receiver) {
 
 		Object.keys(supplier).forEach(function (property) {
 
-			// Check if the value of the supplier's property is an object,
-			// and not a custom object, meaning it is only an instance of Object.
+			if (supplier[property]) {
+				// Check if the value of the supplier's property is an object,
+				// and not a custom object, meaning it is only an instance of Object.
 
-			if (toString.call(supplier[property]) === '[object Object]') {
-				// Ensure that we have a reveiver value to recursively mixin too.
+				if (supplier[property].constructor === Object) {
+					// Ensure that we have a reveiver value to recursively mixin too.
 
-				if (typeof receiver[property] === 'undefined') {
-					receiver[property] = {};
+					receiver[property] = receiver[property] || {};
+
+					// Recursively mixin nested supplier objects into nested receiver objects.
+
+					return UI.obj.mixin(receiver[property], supplier[property]);
 				}
 
-				// Recursively mixin nested supplier objects into nested receiver objects.
+				// Allow objects to have a custom mixinTo method.
 
-				UI.obj.mixin(receiver[property], supplier[property]);
+				if (supplier[property].mixinTo) {
+					receiver[property] = receiver[property] || {};
+
+					return supplier[property].mixinTo(receiver[property]);
+				}
 			}
 
 			// Otherwise, we can safely assume that the supplier value
 			// can overwrite any possible receiver value. Do so using
 			// Object.defineProperty incase we're dealing with getters and setters.
 
-			else {
-				Object.defineProperty(
-					receiver,
-					property,
-					Object.getOwnPropertyDescriptor(supplier, property)
-				);
-			}
+			Object.defineProperty(
+				receiver,
+				property,
+				Object.getOwnPropertyDescriptor(supplier, property)
+			);
 
 		});
 
@@ -282,8 +288,7 @@ UI.obj.mixin = function (receiver) {
 // Reasons this library was created, instead of using jQuery or another?
 // 1) Only intended to support modern browsers and jQuery is too bloated.
 // 2) Other libraries were also to large or they didn't focus on the requirements.
-// 3) Others, used spaces instead of tabs, or just could not find something nice
-//    no matter how much I googled. Also, I'm a control freak, so go **** yourself! :P
+
 
 UI.dom = {};
 
@@ -329,7 +334,7 @@ UI.dom.closest = function (element, matcher) {
 		// Invoke the matcher function every time, if it
 		// returns a truthy value then a match has been found.
 
-		if (matcher(parent)) matched = parent;
+		if (matcher(element)) matched = element;
 
 		element = element.parentNode;
 
@@ -354,9 +359,16 @@ UI.dom.trigger = function (element, event_name, event_data) {
 	}
 
 
-	var event = event_data ?
-		new CustomEvent(event_name, event_data) :
-		new Event(event_name);
+	// Make cancelable default to true.
+
+	event_data = event_data || {};
+
+	if (event_data.cancelable === undefined) {
+		event_data.cancelable = true;
+	}
+
+
+	var event = new CustomEvent(event_name, event_data);
 
 
 	element.dispatchEvent(event);
@@ -916,7 +928,7 @@ UI.dom.events.remove.all = function (element, events, use_capture) {
 
 UI.dom.events.remove.some = function (element, event_name, event_handlers, use_capture) {
 
-	if (!event_handlers) return;
+	if (!event_handlers || event_name === 'capture') return;
 
 
 	// Sometimes event_handlers is just a single event handler,
@@ -1016,6 +1028,12 @@ UI.obj.declare('Menu', function () {
 		if (options) {
 			options.forEach(this.addOption.bind(this));
 		}
+
+
+		UI.dom.events(this.element, {
+			mousedown: function (event) {event.stopPropagation();},
+			click: this.hideAll.bind(this)
+		});
 
 
 		this.setupToggle(this.options.toggle || {});
@@ -1171,15 +1189,18 @@ UI.obj.declare('Menu', function () {
 
 		if (!this.isActive) return;
 
+
 		var event = UI.dom.trigger(this.element, 'hide');
 
 		if (event.defaultPrevented) return;
+
 
 		this.element.classList.remove('open');
 
 		this.removeAutoHide();
 
 		this.removeKeydown();
+
 
 		UI.dom.trigger(this.element, 'hidden');
 
@@ -1192,13 +1213,16 @@ UI.obj.declare('Menu', function () {
 
 		if (event.defaultPrevented) return;
 
+
 		this.element.classList.add('open');
 
 		this.setupAutoHide();
 
 		this.setupKeydown();
 
+
 		UI.dom.trigger(this.element, 'shown');
+
 
 		if (this.toggle_element) {
 			this.toggle_element.focus();
@@ -1213,13 +1237,16 @@ UI.obj.declare('Menu', function () {
 
 		var isActive = this.isActive;
 
+
 		this.hideAll();
+
 
 		if (!isActive) {
 			event.stopPropagation();
 
 			this.show();
 		}
+
 
 		event.preventDefault();
 
@@ -1544,8 +1571,6 @@ UI.obj.declare('Dialog', function () {
 				]}
 			]	
 		},
-		backdrop: false,
-		keyboard: false,
 		show: true
 	};
 
@@ -1566,8 +1591,13 @@ UI.obj.declare('Dialog', function () {
 		this.setupFooter();
 
 
-		if (this.options.show) {
-			this.show();
+		UI.dom.events(this.element, {
+			click: this.onClickDismissCheck.bind(this)
+		});
+
+
+		if (!this.options.show) {
+			this.hide();
 		}
 
 	};
@@ -1580,7 +1610,7 @@ UI.obj.declare('Dialog', function () {
 				parent: this.header_element,
 				names: 'close',
 				data: {dismiss: 'modal'},
-				text: '&times;',
+				html: '&times;',
 				tag: 'button'
 			});
 		}
@@ -1624,193 +1654,35 @@ UI.obj.declare('Dialog', function () {
 	};
 
 
-	this.toggle = function (event, _related_target) {
-
-		return this[this.isShown ? 'hide' : 'show'](event, _related_target);
-
-	};
-
-
-	this.show = function (event, _related_target) {
-
-		if (event && event.defaultPrevented) return;
-
-		var show_event = UI.dom.trigger(this.element, 'show', {
-			relatedTarget: _related_target
-		});
-
-		if (this.isShown || show_event.defaultPrevented) return;
-
-		this.isShown = true;
-
-		this.escape();
-
-		UI.dom.events(this.element, this.dismiss_events = this.dismiss_events || {
-			click: this.onClickDismissCheck.bind(this)
-		});
-
-		this.backdrop(function () {
-
-			// var transition = $.support.transition && that.$element.hasClass('fade')
-
-			// if (!that.$element.parent().length) {
-				// that.$element.appendTo(document.body) // don't move modals dom position
-			// }
-
-			this.element.style.display = 'block';
-
-			// if (transition) {
-				// that.$element[0].offsetWidth // force reflow
-			// }
-
-			// that.$element
-				// .addClass('in')
-				// .attr('aria-hidden', false)
-
-			// that.enforceFocus()
-
-			// var e = $.Event('shown.bs.modal', { relatedTarget: _relatedTarget })
-
-			// transition ?
-				// that.$element.find('.modal-dialog') // wait for modal to slide in
-					// .one($.support.transition.end, function () {
-						// that.$element.focus().trigger(e)
-					// })
-					// .emulateTransitionEnd(300) :
-				// that.$element.focus().trigger(e)
-
-		}.bind(this));
-
-	};
-
-
 	this.onClickDismissCheck = function (event) {
 
-		var toggle_element = UI.dom.closest(event.target, this.element, function (element) {
+		var dismiss_element = UI.dom.closest(event.target, this.element, function (element) {
 
-			return element.dataset.toggle === 'modal';
+			return element.dataset.dismiss === 'modal';
 
 		});
 
 
-		if (toggle_element) this.hide(event);
+		if (dismiss_element) {
+			UI.dom.trigger(this.element, 'dismiss');
 
-	};
-
-
-	this.hide = function (event) {
-
-		if (event) event.preventDefault();
-
-		var hide_event = UI.dom.trigger(this.element, 'hide');
-
-		if (!this.isShown || hide_event.defaultPrevented) return;
-
-		this.isShown = false;
-
-		this.escape();
-
-		UI.dom.events.remove(this.element, this.dismiss_events);
-
-		// $(document).off('focusin.bs.modal')
-
-		// this.$element
-			// .removeClass('in')
-			// .attr('aria-hidden', true)
-			// .off('click.dismiss.modal')
-
-		// $.support.transition && this.$element.hasClass('fade') ?
-			// this.$element
-				// .one($.support.transition.end, $.proxy(this.hideModal, this))
-				// .emulateTransitionEnd(300) :
-			// this.hideModal()
-
-	};
-
-
-	this.enforceFocus = function () {
-		// $(document)
-			// .off('focusin.bs.modal') // guard against infinite focus loop
-			// .on('focusin.bs.modal', $.proxy(function (e) {
-				// if (this.$element[0] !== e.target && !this.$element.has(e.target).length) {
-					// this.$element.focus()
-				// }
-			// }, this))
-	};
-
-
-	this.escape = function () {
-
-		if (this.isShown && this.options.keyboard) {
-			// this.$element.on('keyup.dismiss.bs.modal', $.proxy(function (e) {
-			// 	e.which == 27 && this.hide()
-			// }, this))
-		} else if (!this.isShown) {
-			// this.$element.off('keyup.dismiss.bs.modal')
+			this.hide(event);
 		}
 
 	};
 
 
-	this.hideModal = function () {
+	this.show = function () {
 
-		// var that = this
-		// this.$element.hide()
-		// this.backdrop(function () {
-			// that.removeBackdrop()
-			// that.$element.trigger('hidden.bs.modal')
-		// })
+		this.element.style.display = 'block';
 
 	};
 
 
-	this.removeBackdrop = function () {
-		// this.$backdrop && this.$backdrop.remove()
-		// this.$backdrop = null
-	};
+	this.hide = function () {
 
+		this.element.style.display = 'none';
 
-	this.backdrop = function (callback) {
-		// var that    = this
-		// var animate = this.$element.hasClass('fade') ? 'fade' : ''
-
-		// if (this.isShown && this.options.backdrop) {
-		// 	var doAnimate = $.support.transition && animate
-
-		// 	this.$backdrop = $('<div class="modal-backdrop ' + animate + '" />')
-		// 		.appendTo(document.body)
-
-		// 	this.$element.on('click.dismiss.modal', $.proxy(function (e) {
-		// 		if (e.target !== e.currentTarget) return
-		// 		this.options.backdrop == 'static'
-		// 			? this.$element[0].focus.call(this.$element[0])
-		// 			: this.hide.call(this)
-		// 	}, this))
-
-		// 	if (doAnimate) this.$backdrop[0].offsetWidth // force reflow
-
-		// 	this.$backdrop.addClass('in')
-
-		// 	if (!callback) return
-
-		// 	doAnimate ?
-		// 		this.$backdrop
-		// 			.one($.support.transition.end, callback)
-		// 			.emulateTransitionEnd(150) :
-		// 		callback()
-
-		// } else if (!this.isShown && this.$backdrop) {
-		// 	this.$backdrop.removeClass('in')
-
-		// 	$.support.transition && this.$element.hasClass('fade')?
-		// 		this.$backdrop
-		// 			.one($.support.transition.end, callback)
-		// 			.emulateTransitionEnd(150) :
-		// 		callback()
-
-		// } else if (callback) {
-		// 	callback()
-		// }
 	};
 
 });
@@ -1877,6 +1749,28 @@ UI.dom.emulateTransitionEnd = function (element, duration) {
 
 };
 
+
+UI.dom.onceTransitionEnd = function (element, duration, callback) {
+
+	if (!callback) return;
+
+
+	var transition_events = {};
+
+	transition_events[UI.dom.getTransitionEndEventName()] = function (event) {
+
+		UI.dom.events.remove(element, transition_events);
+
+		callback(event);
+
+	};
+
+	UI.dom.events(element, transition_events);
+
+	UI.dom.emulateTransitionEnd(element, duration);
+
+};
+
 UI.obj.declare('FileList', function () {
 
 	this.default_options = {};
@@ -1899,16 +1793,326 @@ UI.obj.declare('Modal', function () {
 
 	this.default_options = {
 		element: {
-			names: 'modal fade'
-		}
+			names: 'modal'
+		},
+		backdrop_parent: null,
+		backdrop: true,
+		keyboard: true,
+		show: true,
+		fade: true
 	};
 
 	this.initialize = function () {
 
-		if (this.options.dialog) {
-			this.dialog = new UI.Dialog(this.options.dialog);
+		this.options.backdrop_parent =
+			this.options.backdrop_parent || document.body;
 
-			this.dialog.updateElement({parent: this.element});
+		if (this.options.fade) {
+			this.element.classList.add('fade');
+		}
+
+
+		if (typeof this.options.dialog === 'object') {
+			var dialog_options = this.options.dialog;
+
+			dialog_options.element = dialog_options.element || {};
+
+			dialog_options.element.parent = this.element;
+
+			dialog_options.modal = this;
+
+
+			this.dialog = new UI.Dialog(dialog_options);
+		}
+
+
+		if (this.options.show) {
+			this.show();
+		}
+
+		if (this.options.toggle) {
+			this.setupToggle(this.options.toggle);
+		}
+
+
+		UI.dom.events(this.element, this.click_events = this.click_events || {
+			click: this.hide.bind(this)
+		});
+
+	};
+
+
+	this.setupToggle = function (toggle_element) {
+
+		toggle_element = UI.dom.create(toggle_element);
+
+
+		toggle_element.modal = this;
+
+
+		UI.dom.update(toggle_element, {
+			data: {toggle: 'modal'},
+			events: {click: this.show.bind(this)}
+		});
+
+	};
+
+
+	this.toggle = function (event, _related_target) {
+
+		return this[this.isShown ? 'hide' : 'show'](event, _related_target);
+
+	};
+
+
+	Object.defineProperty(this, 'hasFade', {
+		get: function () {
+
+			return this.element.classList.contains('fade');
+
+		}
+	});
+
+
+	this.show = function (event, _related_target) {
+
+		if (event && event.defaultPrevented) return;
+
+		var show_event = UI.dom.trigger(this.element, 'show', {
+			relatedTarget: _related_target
+		});
+
+
+		if (this.isShown || show_event.defaultPrevented) return;
+
+
+		this.isShown = true;
+
+		this.escape();
+
+
+		this.backdrop(function () {
+
+			this.options.backdrop_parent.appendChild(this.element);
+
+
+			this.element.style.display = 'block';
+
+
+			if (this.dialog) {
+				this.dialog.show();
+			}
+
+
+			if (this.hasFade) {
+			  // Force a reflow.
+
+				this.element.offsetWidth;
+			}
+
+
+			this.element.classList.add('in');
+
+			this.element.setAttribute('aria-hidden', false);
+
+			this.enforceFocus();
+
+			
+			if (this.hasFade) {
+				UI.dom.onceTransitionEnd(this.element, 300, trigger_shown.bind(this));
+			}
+
+			else {
+				trigger_shown.call(this);
+			}
+
+
+			function trigger_shown () {
+
+				this.element.focus();
+
+				UI.dom.trigger(this.element, 'shown', {
+					relatedTarget: _related_target
+				});
+
+			}
+
+		}.bind(this));
+
+	};
+
+
+	this.hide = function (event) {
+
+		if (event) event.preventDefault();
+
+
+		var hide_event = UI.dom.trigger(this.element, 'hide');
+
+		if (!this.isShown || hide_event.defaultPrevented) return;
+
+
+		this.isShown = false;
+
+		this.escape();
+
+
+		UI.dom.events.remove(document, this.focusin_events);
+
+
+		this.element.classList.remove('in');
+
+		this.element.setAttribute('aria-hidden', true);
+
+
+		if (this.dialog) {
+			UI.dom.events.remove(this.dialog.element, this.dialog_events);
+		}
+
+
+		if (this.hasFade) {
+			UI.dom.onceTransitionEnd(this.backdrop_element, 300, this.hideModal.bind(this));
+		}
+
+		else {
+			this.hideModal();
+		}
+
+	};
+
+
+	this.enforceFocus = function () {
+
+		this.focusin_events = this.focusin_events || {
+			focusin: function (event) {
+
+				var dont_refocus = UI.dom.closest(event.target, function (element) {
+
+					return element === this.element;
+
+				}.bind(this));
+
+
+				if (!dont_refocus) {
+					this.element.focus();
+				}
+
+			}.bind(this)
+		};
+
+
+		UI.dom.events(document, this.focusin_events);
+
+	};
+
+
+	this.escape = function () {
+
+		if (this.isShown && this.options.keyboard) {
+			UI.dom.events(document, this.keyup_events = this.keyup_events || {
+				keyup: function (event) {
+
+					if (event.which === 27) this.hide();
+
+				}.bind(this)
+			});
+		}
+
+		else if (!this.isShown) {
+			UI.dom.events.remove(document, this.keyup_events);
+		}
+
+	};
+
+
+	this.hideModal = function () {
+
+		this.element.style.display = 'none';
+
+		this.backdrop(function () {
+
+			this.removeBackdrop();
+
+			UI.dom.trigger(this.element, 'hidden');
+
+		}.bind(this));
+
+	};
+
+
+	this.removeBackdrop = function () {
+
+		UI.dom.remove(this.backdrop_element)
+
+		delete this.backdrop_element;
+
+	};
+
+
+	this.backdrop = function (callback) {
+
+		var animate = this.hasFade ? ' fade' : '';
+
+		if (this.isShown && this.options.backdrop) {
+			this.backdrop_element = UI.dom.create({
+				parent: this.options.backdrop_parent,
+				names: 'modal-backdrop' + animate
+			});
+
+
+			if (this.dialog) {
+				UI.dom.events(this.dialog.element, this.dialog_events = this.dialog_events || {
+					click: function (event) {
+
+						event.stopPropagation();
+
+					},
+
+					dismiss: function (event) {
+
+						if (event.target !== event.currentTarget) return;
+
+						if (this.options.backdrop == 'static') {
+							this.element.focus();
+						}
+
+						else {
+							this.hide();
+						}
+
+					}.bind(this)
+				});
+			}
+
+			if (this.hasFade) {
+				this.backdrop_element.offsetWidth; // force reflow
+			}
+
+			this.backdrop_element.classList.add('in');
+
+			if (this.hasFade) {
+				UI.dom.onceTransitionEnd(this.backdrop_element, 300, callback);
+			}
+
+			else if (callback) {
+				callback();
+			}
+		}
+
+		else if (!this.isShown && this.backdrop_element) {
+			this.backdrop_element.classList.remove('in');
+
+			if (this.hasFade) {
+				UI.dom.onceTransitionEnd(this.backdrop_element, 300, callback);
+			}
+
+			else if (callback) {
+				callback();
+			}
+		}
+
+		else if (callback) {
+			callback();
 		}
 
 	};

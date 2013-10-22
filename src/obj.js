@@ -198,32 +198,38 @@ UI.obj.mixin = function (receiver) {
 
 		Object.keys(supplier).forEach(function (property) {
 
-			// Check if the value of the supplier's property is an object,
-			// and not a custom object, meaning it is only an instance of Object.
+			if (supplier[property]) {
+				// Check if the value of the supplier's property is an object,
+				// and not a custom object, meaning it is only an instance of Object.
 
-			if (toString.call(supplier[property]) === '[object Object]') {
-				// Ensure that we have a reveiver value to recursively mixin too.
+				if (supplier[property].constructor === Object) {
+					// Ensure that we have a reveiver value to recursively mixin too.
 
-				if (typeof receiver[property] === 'undefined') {
-					receiver[property] = {};
+					receiver[property] = receiver[property] || {};
+
+					// Recursively mixin nested supplier objects into nested receiver objects.
+
+					return UI.obj.mixin(receiver[property], supplier[property]);
 				}
 
-				// Recursively mixin nested supplier objects into nested receiver objects.
+				// Allow objects to have a custom mixinTo method.
 
-				UI.obj.mixin(receiver[property], supplier[property]);
+				if (supplier[property].mixinTo) {
+					receiver[property] = receiver[property] || {};
+
+					return supplier[property].mixinTo(receiver[property]);
+				}
 			}
 
 			// Otherwise, we can safely assume that the supplier value
 			// can overwrite any possible receiver value. Do so using
 			// Object.defineProperty incase we're dealing with getters and setters.
 
-			else {
-				Object.defineProperty(
-					receiver,
-					property,
-					Object.getOwnPropertyDescriptor(supplier, property)
-				);
-			}
+			Object.defineProperty(
+				receiver,
+				property,
+				Object.getOwnPropertyDescriptor(supplier, property)
+			);
 
 		});
 

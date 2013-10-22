@@ -24,6 +24,12 @@ UI.obj.declare('Menu', function () {
 		}
 
 
+		UI.dom.events(this.element, {
+			mousedown: function (event) {event.stopPropagation();},
+			click: this.hideAll.bind(this)
+		});
+
+
 		this.setupToggle(this.options.toggle || {});
 
 	};
@@ -177,15 +183,18 @@ UI.obj.declare('Menu', function () {
 
 		if (!this.isActive) return;
 
+
 		var event = UI.dom.trigger(this.element, 'hide');
 
 		if (event.defaultPrevented) return;
+
 
 		this.element.classList.remove('open');
 
 		this.removeAutoHide();
 
 		this.removeKeydown();
+
 
 		UI.dom.trigger(this.element, 'hidden');
 
@@ -198,13 +207,16 @@ UI.obj.declare('Menu', function () {
 
 		if (event.defaultPrevented) return;
 
+
 		this.element.classList.add('open');
 
 		this.setupAutoHide();
 
 		this.setupKeydown();
 
+
 		UI.dom.trigger(this.element, 'shown');
+
 
 		if (this.toggle_element) {
 			this.toggle_element.focus();
@@ -219,13 +231,16 @@ UI.obj.declare('Menu', function () {
 
 		var isActive = this.isActive;
 
+
 		this.hideAll();
+
 
 		if (!isActive) {
 			event.stopPropagation();
 
 			this.show();
 		}
+
 
 		event.preventDefault();
 

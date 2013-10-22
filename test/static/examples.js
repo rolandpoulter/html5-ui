@@ -60,6 +60,7 @@ UI.create({
 UI.create({
 	component: 'Modal',
 	element: {
+		attrs: {id: 'myDialog', role: 'dialog'},
 		parent: page
 	},
 	dialog: {
@@ -68,6 +69,36 @@ UI.create({
 		actions: [
 			{text: 'Close', data: {dismiss: 'modal'}},
 			{text: 'Save changes', names: 'btn btn-primary'}
-		]
+		],
+		body: {
+			tag: 'p',
+			text: 'Modal body...'
+		}
+	},
+	show: false,
+	toggle: {
+		component: 'Button',
+		element: {
+			tag: 'a',
+			text: 'Launch modal dialog',
+			attrs: {href: '#myDialog'},
+			data: {toggle: 'modal'},
+			parent: page
+		}
+	}
+});
+
+var loading_button = new UI.Button({
+	element: {
+		parent: page,
+		text: 'Loading state',
+		data: {loadingText: 'Loading...'},
+		events: {click: function () {
+			loading_button.state = 'loading';
+
+			setTimeout(function () {
+				loading_button.state = 'reset';
+			}, 1000);
+		}}
 	}
 });
