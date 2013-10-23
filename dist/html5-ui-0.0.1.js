@@ -1308,12 +1308,6 @@ UI.obj.declare('Menu', function () {
 
 });
 
-UI.obj.declare('AutoComplete', function () {
-
-	this.default_options = {};
-
-});
-
 UI.obj.declare('Button', function () {
 
 	this.default_options = {
@@ -1773,18 +1767,6 @@ UI.dom.onceTransitionEnd = function (element, duration, callback) {
 
 };
 
-UI.obj.declare('FileList', function () {
-
-	this.default_options = {};
-
-});
-
-UI.obj.declare('GhostDom', function () {
-
-	this.default_options = {};
-
-});
-
 UI.obj.declare('Layout', function () {
 
 	this.default_options = {};
@@ -2105,7 +2087,7 @@ UI.obj.declare('Modal', function () {
 			}
 		}
 
-		else if (!this.isShown && this.backdrop_element) {debugger;
+		else if (!this.isShown && this.backdrop_element) {
 			this.backdrop_element.classList.remove('in');
 
 			if (this.hasFade) {
@@ -2345,11 +2327,5 @@ UI.obj.declare('TabList', function () {
 		}
 
 	};
-
-});
-
-UI.obj.declare('Tooltip', function () {
-
-	this.default_options = {};
 
 });

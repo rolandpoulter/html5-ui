@@ -312,7 +312,7 @@ UI.obj.declare('Modal', function () {
 			}
 		}
 
-		else if (!this.isShown && this.backdrop_element) {debugger;
+		else if (!this.isShown && this.backdrop_element) {
 			this.backdrop_element.classList.remove('in');
 
 			if (this.hasFade) {
