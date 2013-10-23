@@ -104,9 +104,11 @@ UI.obj.declare('Dialog', function () {
 
 
 		if (dismiss_element) {
-			UI.dom.trigger(this.element, 'dismiss');
+			var dismiss_event = UI.dom.trigger(this.element, 'dismiss');
 
-			this.hide(event);
+			if (!dismiss_event.defaultPrevented) {
+				this.hide(event);
+			}
 		}
 
 	};

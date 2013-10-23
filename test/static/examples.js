@@ -102,3 +102,14 @@ var loading_button = new UI.Button({
 		}}
 	}
 });
+
+new UI.TabList({
+	element: {
+		parent: page
+	},
+	tabs: [
+		{element: {text: 'One'}},
+		{element: {text: 'Two'}},
+		{element: {text: 'Three'}}
+	]
+});

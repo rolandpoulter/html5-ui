@@ -281,7 +281,11 @@ UI.obj.declare('Modal', function () {
 
 						if (event.target !== event.currentTarget) return;
 
-						if (this.options.backdrop == 'static') {
+
+						event.preventDefault();
+
+
+						if (this.options.backdrop === 'static') {
 							this.element.focus();
 						}
 
@@ -308,7 +312,7 @@ UI.obj.declare('Modal', function () {
 			}
 		}
 
-		else if (!this.isShown && this.backdrop_element) {
+		else if (!this.isShown && this.backdrop_element) {debugger;
 			this.backdrop_element.classList.remove('in');
 
 			if (this.hasFade) {

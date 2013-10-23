@@ -180,7 +180,7 @@ UI.obj.initialize = function (context, options) {
 	// Mixin the options object and any default options from the context
 	// into a new options object assigned to the context.
 
-	context.options = UI.obj.mixin({}, context.default_options, options);
+	context.options = UI.obj.mixin({element: {}}, context.default_options, options);
 
 	// Creates a dom element from options.element. See UI.dom.create() for more details.
 
@@ -1664,9 +1664,11 @@ UI.obj.declare('Dialog', function () {
 
 
 		if (dismiss_element) {
-			UI.dom.trigger(this.element, 'dismiss');
+			var dismiss_event = UI.dom.trigger(this.element, 'dismiss');
 
-			this.hide(event);
+			if (!dismiss_event.defaultPrevented) {
+				this.hide(event);
+			}
 		}
 
 	};
@@ -2072,7 +2074,11 @@ UI.obj.declare('Modal', function () {
 
 						if (event.target !== event.currentTarget) return;
 
-						if (this.options.backdrop == 'static') {
+
+						event.preventDefault();
+
+
+						if (this.options.backdrop === 'static') {
 							this.element.focus();
 						}
 
@@ -2099,7 +2105,7 @@ UI.obj.declare('Modal', function () {
 			}
 		}
 
-		else if (!this.isShown && this.backdrop_element) {
+		else if (!this.isShown && this.backdrop_element) {debugger;
 			this.backdrop_element.classList.remove('in');
 
 			if (this.hasFade) {
@@ -2119,9 +2125,226 @@ UI.obj.declare('Modal', function () {
 
 });
 
-UI.obj.declare('Tabs', function () {
+UI.obj.declare('Tab', function () {
 
-	this.default_options = {};
+	this.default_options = {
+		element: {
+			parent: {
+				tag: 'li'
+			},
+			attrs: {href: '#'},
+			data: {toggle: 'tab'},
+			tag: 'a'
+		},
+		pane: {},
+		fade: true
+	};
+
+
+	this.initialize = function () {
+
+		this.list_item_element = this.element.parentNode;
+
+
+		UI.dom.events(this.element, {
+			click: this.show.bind(this)
+		});
+
+
+		this.pane_element = UI.dom.create({
+			names: 'tab-pane'
+		}, this.options.pane);
+
+
+		if (this.options.fade) {
+			this.pane_element.classList.add('pane');
+		}
+
+	};
+
+
+	this.setParentList = function (tab_list) {
+
+		if (this.parent) {
+			this.parent.removeTab(this);
+		}
+
+
+		tab_list.element.appendChild(this.list_item_element);
+
+		tab_list.pane_container_element.appendChild(this.pane_element);
+
+
+		this.parent = tab_list;
+
+	};
+
+
+	Object.defineProperty(this, 'isActive', {
+		get: function () {
+
+			return this.list_item_element.classList.contains('active');
+
+		}
+	});
+
+
+	Object.defineProperty(this, 'hasFade', {
+		get: function () {
+
+			return this.pane_element.classList.contains('fade');
+
+		}
+	});
+
+
+	this.show = function () {
+
+		if (!this.parent || this.isActive) return;
+
+
+		var active = this.parent.active;
+
+
+		var event_details = {
+			relatedTarget: active && active.element
+		};
+
+
+		var show_event = UI.dom.trigger(this.element, 'show', event_details);
+
+
+		if (show_event.defaultPrevented) return;
+
+
+		this.activate(function () {
+
+			UI.dom.trigger(this.element, 'shown', event_details);
+
+		}.bind(this));
+
+	};
+
+
+	this.activate = function (callback) {
+
+		if (!this.parent || this.isActive) return;
+
+
+		var active = this.parent.active;
+
+		if (active) {
+			active.list_item_element.classList.remove('active');
+
+			if (active.hasFade) {
+				active.pane_element.classList.remove('in');
+
+				UI.dom.onceTransitionEnd(active.pane_element, 150, activate_tab.bind(this));
+			}
+
+			else {
+				activate_tab.call(this);
+			}
+		}
+
+		else {
+			activate_tab.call(this);
+		}
+
+
+		function activate_tab () {
+
+			this.parent.active = this;
+
+			this.list_item_element.classList.add('active');
+
+
+			if (this.hasFade) {
+				this.element.offsetWidth; // reflow for transition
+
+				this.pane_element.classList.add('in');
+			}
+
+			else if (callback) {
+				callback();
+			}
+
+		}
+
+	};
+
+});
+
+UI.obj.declare('TabList', function () {
+
+	this.default_options = {
+		element: {
+			tag: 'ul',
+			names: 'nav nav-tabs'
+		}
+	};
+
+
+	this.initialize = function () {
+
+		this.tabs = [];
+
+
+		this.pane_container_element = UI.dom.create(UI.obj.mixin({
+			names: 'tab-content',
+			parent: this.element.parentNode
+		}, this.options.pane_container));
+
+
+		if (this.options.tabs) {
+			this.options.tabs.forEach(this.addTab.bind(this));
+		}
+
+
+		if (this.tabs.length) {
+			this.tabs[0].show();
+		}
+
+	};
+
+
+	this.addTab = function (tab_definition) {
+
+		// TODO: support dropdown menus in tab list.
+
+		var tab = (tab_definition instanceof UI.Tab) ?
+			tab_definition : new UI.Tab(tab_definition);
+
+
+		if (this.tabs.indexOf(tab) === -1) {
+			tab.setParentList(this);
+
+			this.tabs.push(tab);
+		}
+
+
+		return tab;
+
+	};
+
+
+	this.removeTab = function (tab) {
+
+		var index = this.tabs.indexOf(tab);
+
+		if (index !== -1) {
+			this.element.removeChild(tab.list_item_element);
+
+			this.pane_container_element.removeChild(tab.pane_element);
+
+
+			delete tab.parent;
+
+
+			this.tabs.splice(index, 1);
+		}
+
+	};
 
 });
 

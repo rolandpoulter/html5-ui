@@ -137,7 +137,7 @@ UI.obj.initialize = function (context, options) {
 	// Mixin the options object and any default options from the context
 	// into a new options object assigned to the context.
 
-	context.options = UI.obj.mixin({}, context.default_options, options);
+	context.options = UI.obj.mixin({element: {}}, context.default_options, options);
 
 	// Creates a dom element from options.element. See UI.dom.create() for more details.
 
