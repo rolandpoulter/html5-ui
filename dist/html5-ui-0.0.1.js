@@ -1767,12 +1767,6 @@ UI.dom.onceTransitionEnd = function (element, duration, callback) {
 
 };
 
-UI.obj.declare('Layout', function () {
-
-	this.default_options = {};
-
-});
-
 UI.obj.declare('Modal', function () {
 
 	this.default_options = {
