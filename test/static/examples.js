@@ -1,3 +1,18 @@
+// var main_split = new UI.SplitView({
+// 	element: page,
+// 	split_size: 100,
+// 	one: {attrs: {id: 'header'}},
+// 	two: {attrs: {id: 'main'}}
+// });
+
+// new UI.SplitView({
+// 	element: {parent: '#main'},
+// 	orientation: 'horizontal',
+// 	one: {attrs: {id: 'left'}},
+// 	two: {attrs: {id: 'right'}}
+// });
+
+
 var button_group = UI.create({
 	names: 'btn-group',
 	parent: page,
