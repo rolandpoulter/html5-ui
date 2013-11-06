@@ -1,21 +1,19 @@
-// var main_split = new UI.SplitView({
-// 	element: page,
-// 	split_size: 100,
-// 	one: {attrs: {id: 'header'}},
-// 	two: {attrs: {id: 'main'}}
-// });
-
-// new UI.SplitView({
-// 	element: {parent: '#main'},
-// 	orientation: 'horizontal',
-// 	one: {attrs: {id: 'left'}},
-// 	two: {attrs: {id: 'right'}}
-// });
-
+var main_split = new UI.SplitView({
+	element: page,
+	split_size: 100,
+	one: {attrs: {id: 'header'}},
+	two: {
+		component: 'SplitView',
+		element: {attrs: {id: 'main'}},
+		orientation: 'horizontal',
+		one: {attrs: {id: 'left'}},
+		two: {attrs: {id: 'right'}}
+	}
+});
 
 var button_group = UI.create({
 	names: 'btn-group',
-	parent: page,
+	parent: header,
 	children: [{
 		component: 'Button',
 		element: {
@@ -43,13 +41,12 @@ var menu_options = [
 
 var menu = new UI.Menu({
 	element: {
-		names: 'btn-group',
-		parent: button_group
+		parent: page
 	},
 	options: menu_options,
 	toggle: {
 		component: 'Button',
-		element: {text: 'Right ', children: [{names: 'caret'}]}
+		element: {parent: button_group, text: 'Right ', children: [{names: 'caret'}]},
 	}
 });
 
@@ -57,7 +54,7 @@ UI.create({
 	component: 'ContextMenu',
 	element: {
 		parent: {
-			before: page.firstChild,
+			before: right,
 			names: 'overlay',
 			css: {position: 'absolute', top: 0, left: 0}
 		}
@@ -69,7 +66,7 @@ UI.create({
 UI.create({
 	tag: 'p',
 	text: 'Right click for a context menu.',
-	parent: page
+	parent: right
 });
 
 UI.create({
@@ -98,7 +95,7 @@ UI.create({
 			text: 'Launch modal dialog',
 			attrs: {href: '#myDialog'},
 			data: {toggle: 'modal'},
-			parent: page
+			parent: left
 		}
 	}
 });
@@ -120,7 +117,7 @@ var loading_button = new UI.Button({
 
 new UI.TabList({
 	element: {
-		parent: page
+		parent: header
 	},
 	tabs: [
 		{element: {text: 'One'}},

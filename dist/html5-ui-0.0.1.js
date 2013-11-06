@@ -347,6 +347,25 @@ UI.dom.closest = function (element, matcher) {
 };
 
 
+// Find the absolute position of an element.
+
+UI.dom.position = function (element) {
+
+	var x = 0, y = 0;
+
+
+	do {
+		x += element.offsetLeft;
+		y += element.offsetTop;
+
+	} while (element = element.offsetParent);
+
+
+	return {x: x, y: y};
+
+};
+
+
 // Dispatch a DOM event for a given element. This can be used
 // to simulate a standard event such as "click", or custom events.
 
@@ -1017,8 +1036,10 @@ UI.obj.declare('Menu', function () {
 		}
 	};
 
-
+ 
 	this.initialize = function () {
+
+		this.element.menu = this;
 
 		this.menu_element = this.element.firstChild;
 
@@ -1031,7 +1052,7 @@ UI.obj.declare('Menu', function () {
 
 
 		UI.dom.events(this.element, {
-			mousedown: function (event) {event.stopPropagation();},
+			mousedown: function (event) { event.stopPropagation(); },
 			click: this.hideAll.bind(this)
 		});
 
@@ -1107,8 +1128,7 @@ UI.obj.declare('Menu', function () {
 		UI.dom.update(this.toggle_element, {
 			data: {toggle: 'dropdown'},
 			names: 'dropdown-toggle',
-			events: {click: this.onToggle.bind(this)},
-			before: this.menu_element
+			events: {click: this.onToggle.bind(this)}
 		});
 
 	};
@@ -1172,11 +1192,11 @@ UI.obj.declare('Menu', function () {
 
 	this.hideAll = function () {
 
-		var all_toggle_elements = UI.dom.query('[data-toggle=dropdown]');
+		var all_open_menus = UI.dom.query('.dropdown.open');
 
-		all_toggle_elements.forEach(function (toggle_element) {
+		all_open_menus.forEach(function (menu_element) {
 
-			var menu = toggle_element.menu;
+			var menu = menu_element.menu;
 
 			if (menu) menu.hide();
 
@@ -1190,9 +1210,9 @@ UI.obj.declare('Menu', function () {
 		if (!this.isActive) return;
 
 
-		var event = UI.dom.trigger(this.element, 'hide');
+		var hide_event = UI.dom.trigger(this.element, 'hide');
 
-		if (event.defaultPrevented) return;
+		if (hide_event.defaultPrevented) return;
 
 
 		this.element.classList.remove('open');
@@ -1207,14 +1227,17 @@ UI.obj.declare('Menu', function () {
 	};
 
 
-	this.show = function () {
+	this.show = function (event) {
 
-		var event = UI.dom.trigger(this.element, 'show');
+		var show_event = UI.dom.trigger(this.element, 'show');
 
-		if (event.defaultPrevented) return;
+		if (show_event.defaultPrevented) return;
 
 
 		this.element.classList.add('open');
+
+		this.position(event);
+
 
 		this.setupAutoHide();
 
@@ -1244,7 +1267,7 @@ UI.obj.declare('Menu', function () {
 		if (!isActive) {
 			event.stopPropagation();
 
-			this.show();
+			this.show(event);
 		}
 
 
@@ -1303,6 +1326,21 @@ UI.obj.declare('Menu', function () {
 
 
 		items[index].focus();
+
+	};
+
+
+	this.position = function (event) {
+
+		UI.dom.css(this.menu_element, {top: 0, left: 0});
+
+		var position = UI.dom.position(this.menu_element);
+
+
+		UI.dom.css(this.menu_element, {
+			top: (event.pageY - position.y) + 'px',
+			left: (event.pageX - position.x) + 'px'
+		});
 
 	};
 
@@ -1525,13 +1563,7 @@ UI.obj.declare('ContextMenu', UI.Menu, function () {
 
 		this.hideAll();
 
-		UI.dom.css(this.menu_element, {
-			top: event.pageY + 'px',
-			left: event.pageX + 'px'
-		});
-
-
-		this.show();
+		this.show(event);
 
 
 		event.stopPropagation();
@@ -2131,6 +2163,8 @@ UI.obj.declare('SplitView', function () {
 			css: {position: 'relative', overflow: 'hidden'}
 		});
 
+		this.element.split_view = this;
+
 
 		this.one_element = UI.dom.create(this.options.one);
 
@@ -2252,6 +2286,7 @@ UI.obj.declare('SplitView', function () {
 
 
 	this.startResize = function (event) {
+
 		this.resize_state = {
 			resize_class: 'resize-' + this.orientation,
 			split_size: this[this.size_getter] * this.split_ratio,
@@ -2268,6 +2303,8 @@ UI.obj.declare('SplitView', function () {
 			mouseup: this.stopResize.bind(this),
 			mousemove: this.dragResize.bind(this)
 		});
+
+		event.preventDefault();
 
 	};
 
@@ -2289,6 +2326,8 @@ UI.obj.declare('SplitView', function () {
 
 		this.throttledAdapt();
 
+		event.preventDefault();
+
 	};
 
 
@@ -2299,6 +2338,8 @@ UI.obj.declare('SplitView', function () {
 		delete this.resize_state;
 
 		UI.dom.events.remove(document, this.resize_events);
+
+		event.preventDefault();
 
 	};
 
@@ -2369,7 +2410,7 @@ UI.obj.declare('SplitView', function () {
 	};
 
 
-	this.adapt = function () {
+	this.adapt = function (non_recursive) {
 
 		if (!this.one_element) return;
 
@@ -2426,6 +2467,17 @@ UI.obj.declare('SplitView', function () {
 
 
 		this.adaptResizeHandle();
+
+
+		if (non_recursive) return;
+
+		UI.dom.query('.split-view', this.element).forEach(function (child_split_view) {
+
+			if (child_split_view && child_split_view.split_view) {
+				child_split_view.split_view.adapt(true);
+			}
+
+		});
 
 	};
 

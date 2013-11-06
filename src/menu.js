@@ -11,8 +11,10 @@ UI.obj.declare('Menu', function () {
 		}
 	};
 
-
+ 
 	this.initialize = function () {
+
+		this.element.menu = this;
 
 		this.menu_element = this.element.firstChild;
 
@@ -25,7 +27,7 @@ UI.obj.declare('Menu', function () {
 
 
 		UI.dom.events(this.element, {
-			mousedown: function (event) {event.stopPropagation();},
+			mousedown: function (event) { event.stopPropagation(); },
 			click: this.hideAll.bind(this)
 		});
 
@@ -101,8 +103,7 @@ UI.obj.declare('Menu', function () {
 		UI.dom.update(this.toggle_element, {
 			data: {toggle: 'dropdown'},
 			names: 'dropdown-toggle',
-			events: {click: this.onToggle.bind(this)},
-			before: this.menu_element
+			events: {click: this.onToggle.bind(this)}
 		});
 
 	};
@@ -166,11 +167,11 @@ UI.obj.declare('Menu', function () {
 
 	this.hideAll = function () {
 
-		var all_toggle_elements = UI.dom.query('[data-toggle=dropdown]');
+		var all_open_menus = UI.dom.query('.dropdown.open');
 
-		all_toggle_elements.forEach(function (toggle_element) {
+		all_open_menus.forEach(function (menu_element) {
 
-			var menu = toggle_element.menu;
+			var menu = menu_element.menu;
 
 			if (menu) menu.hide();
 
@@ -184,9 +185,9 @@ UI.obj.declare('Menu', function () {
 		if (!this.isActive) return;
 
 
-		var event = UI.dom.trigger(this.element, 'hide');
+		var hide_event = UI.dom.trigger(this.element, 'hide');
 
-		if (event.defaultPrevented) return;
+		if (hide_event.defaultPrevented) return;
 
 
 		this.element.classList.remove('open');
@@ -201,14 +202,17 @@ UI.obj.declare('Menu', function () {
 	};
 
 
-	this.show = function () {
+	this.show = function (event) {
 
-		var event = UI.dom.trigger(this.element, 'show');
+		var show_event = UI.dom.trigger(this.element, 'show');
 
-		if (event.defaultPrevented) return;
+		if (show_event.defaultPrevented) return;
 
 
 		this.element.classList.add('open');
+
+		this.position(event);
+
 
 		this.setupAutoHide();
 
@@ -238,7 +242,7 @@ UI.obj.declare('Menu', function () {
 		if (!isActive) {
 			event.stopPropagation();
 
-			this.show();
+			this.show(event);
 		}
 
 
@@ -297,6 +301,21 @@ UI.obj.declare('Menu', function () {
 
 
 		items[index].focus();
+
+	};
+
+
+	this.position = function (event) {
+
+		UI.dom.css(this.menu_element, {top: 0, left: 0});
+
+		var position = UI.dom.position(this.menu_element);
+
+
+		UI.dom.css(this.menu_element, {
+			top: (event.pageY - position.y) + 'px',
+			left: (event.pageX - position.x) + 'px'
+		});
 
 	};
 

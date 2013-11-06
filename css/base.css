@@ -1,0 +1,7 @@
+.split-view {overflow: hidden;}
+.split-view-pane {overflow: auto;}
+.resize-handle {}
+.split-view.resize-vertical,
+.resize-handle.vertical {cursor: row-resize !important;}
+.split-view.resize-horizontal,
+.resize-handle.horizontal {cursor: col-resize !important;}

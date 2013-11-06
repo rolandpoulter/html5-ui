@@ -52,13 +52,7 @@ UI.obj.declare('ContextMenu', UI.Menu, function () {
 
 		this.hideAll();
 
-		UI.dom.css(this.menu_element, {
-			top: event.pageY + 'px',
-			left: event.pageX + 'px'
-		});
-
-
-		this.show();
+		this.show(event);
 
 
 		event.stopPropagation();

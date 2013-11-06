@@ -28,6 +28,8 @@ UI.obj.declare('SplitView', function () {
 			css: {position: 'relative', overflow: 'hidden'}
 		});
 
+		this.element.split_view = this;
+
 
 		this.one_element = UI.dom.create(this.options.one);
 
@@ -149,6 +151,7 @@ UI.obj.declare('SplitView', function () {
 
 
 	this.startResize = function (event) {
+
 		this.resize_state = {
 			resize_class: 'resize-' + this.orientation,
 			split_size: this[this.size_getter] * this.split_ratio,
@@ -165,6 +168,8 @@ UI.obj.declare('SplitView', function () {
 			mouseup: this.stopResize.bind(this),
 			mousemove: this.dragResize.bind(this)
 		});
+
+		event.preventDefault();
 
 	};
 
@@ -186,6 +191,8 @@ UI.obj.declare('SplitView', function () {
 
 		this.throttledAdapt();
 
+		event.preventDefault();
+
 	};
 
 
@@ -196,6 +203,8 @@ UI.obj.declare('SplitView', function () {
 		delete this.resize_state;
 
 		UI.dom.events.remove(document, this.resize_events);
+
+		event.preventDefault();
 
 	};
 
@@ -266,7 +275,7 @@ UI.obj.declare('SplitView', function () {
 	};
 
 
-	this.adapt = function () {
+	this.adapt = function (non_recursive) {
 
 		if (!this.one_element) return;
 
@@ -323,6 +332,17 @@ UI.obj.declare('SplitView', function () {
 
 
 		this.adaptResizeHandle();
+
+
+		if (non_recursive) return;
+
+		UI.dom.query('.split-view', this.element).forEach(function (child_split_view) {
+
+			if (child_split_view && child_split_view.split_view) {
+				child_split_view.split_view.adapt(true);
+			}
+
+		});
 
 	};
 

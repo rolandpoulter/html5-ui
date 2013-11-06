@@ -62,6 +62,25 @@ UI.dom.closest = function (element, matcher) {
 };
 
 
+// Find the absolute position of an element.
+
+UI.dom.position = function (element) {
+
+	var x = 0, y = 0;
+
+
+	do {
+		x += element.offsetLeft;
+		y += element.offsetTop;
+
+	} while (element = element.offsetParent);
+
+
+	return {x: x, y: y};
+
+};
+
+
 // Dispatch a DOM event for a given element. This can be used
 // to simulate a standard event such as "click", or custom events.
 

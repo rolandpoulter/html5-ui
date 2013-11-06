@@ -23,6 +23,8 @@ app.configure(function () {
 
   app.use('/dist', express.static(__dirname + '/../dist/'));
 
+  app.use('/css', express.static(__dirname + '/../css/'));
+
   app.use(express.static(__dirname + '/static/'));
 
 });
