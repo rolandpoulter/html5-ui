@@ -18,7 +18,6 @@ UI.mix.resizeHandle = function (mix_options) {
 
 
 		this.resize_handle_element = UI.dom.create(UI.obj.mixin({
-			css: {position: 'absolute'},
 			names: 'resize-handle ' + this[mix_options.handle_class_key],
 			parent: this[mix_options.parent_element_key || 'element'],
 			events: events

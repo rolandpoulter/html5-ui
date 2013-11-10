@@ -588,6 +588,10 @@ UI.dom.update = function (element, definition) {
 		UI.dom.names(element, definition.names);
 	}
 
+	if (definition.other_names) {
+		UI.dom.names(element, definition.other_names);
+	}
+
 
 	// Sets the text content of the DOM element. Setting DOM children after this
 	// won't remove the text, but setting HTML will.
@@ -1061,7 +1065,6 @@ UI.mix.resizeHandle = function (mix_options) {
 
 
 		this.resize_handle_element = UI.dom.create(UI.obj.mixin({
-			css: {position: 'absolute'},
 			names: 'resize-handle ' + this[mix_options.handle_class_key],
 			parent: this[mix_options.parent_element_key || 'element'],
 			events: events
@@ -2648,7 +2651,8 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 	this.default_options = UI.obj.mixin({}, this.default_options, {
 		min_size: null,
 		max_size: null,
-		split_size: null
+		split_size: null,
+		split_side: null
 	});
 
 
@@ -2660,7 +2664,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 
 
 		if (typeof this.options.split_size === 'number') {
-			this.setSplitSize(this.options.split_size);
+			this.setSplitSize(this.options.split_size, this.options.split_side);
 
 			this.adapt();
 		}

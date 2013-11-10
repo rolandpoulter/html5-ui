@@ -3,7 +3,8 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 	this.default_options = UI.obj.mixin({}, this.default_options, {
 		min_size: null,
 		max_size: null,
-		split_size: null
+		split_size: null,
+		split_side: null
 	});
 
 
@@ -15,7 +16,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 
 
 		if (typeof this.options.split_size === 'number') {
-			this.setSplitSize(this.options.split_size);
+			this.setSplitSize(this.options.split_size, this.options.split_side);
 
 			this.adapt();
 		}

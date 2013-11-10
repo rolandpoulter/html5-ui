@@ -285,6 +285,10 @@ UI.dom.update = function (element, definition) {
 		UI.dom.names(element, definition.names);
 	}
 
+	if (definition.other_names) {
+		UI.dom.names(element, definition.other_names);
+	}
+
 
 	// Sets the text content of the DOM element. Setting DOM children after this
 	// won't remove the text, but setting HTML will.

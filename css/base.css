@@ -1,6 +1,6 @@
 .split-view {overflow: hidden;}
 .split-view-pane {overflow: auto;}
-.resize-handle {}
+.resize-handle {position: absolute; z-index: 1;}
 .split-view.resize-vertical,
 .resize-handle.vertical {cursor: row-resize !important;}
 .split-view.resize-horizontal,
