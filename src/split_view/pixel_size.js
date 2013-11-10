@@ -4,7 +4,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 		min_size: null,
 		max_size: null,
 		split_size: null,
-		split_side: null
+		invert_size: null
 	});
 
 
@@ -16,7 +16,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 
 
 		if (typeof this.options.split_size === 'number') {
-			this.setSplitSize(this.options.split_size, this.options.split_side);
+			this.setSplitSize(this.options.split_size, this.options.invert_size);
 
 			this.adapt();
 		}
@@ -38,7 +38,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 		}
 
 
-		this.setSplitSize(new_size, split_side);
+		this.setSplitSize(new_size, split_side || this.last_split_side);
 
 		this.adapt();
 

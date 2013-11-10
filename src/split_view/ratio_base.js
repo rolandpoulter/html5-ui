@@ -167,9 +167,9 @@ UI.obj.declare('SplitView', function () {
 
 			var temp_split_ratio = this.split_ratio;
 
-			this.other_ratio = this.split_ratio;
-
 			this.split_ratio = this.other_ratio;
+
+			this.other_ratio = temp_split_ratio;
 
 		}
 
@@ -290,7 +290,9 @@ UI.obj.declare('SplitView', function () {
 		handle_class_key: 'orientation',
 
 		dblclick: function (event) {
-			this.collapse(this.options.collapse);
+			if (this.options.collapse) {
+				this.collapse(this.options.collapse);
+			}
 		}
 	});
 

@@ -1065,6 +1065,7 @@ UI.mix.resizeHandle = function (mix_options) {
 
 
 		this.resize_handle_element = UI.dom.create(UI.obj.mixin({
+			css: {position: 'absolute'},
 			names: 'resize-handle ' + this[mix_options.handle_class_key],
 			parent: this[mix_options.parent_element_key || 'element'],
 			events: events
@@ -1336,9 +1337,9 @@ UI.obj.declare('SplitView', function () {
 
 			var temp_split_ratio = this.split_ratio;
 
-			this.other_ratio = this.split_ratio;
-
 			this.split_ratio = this.other_ratio;
+
+			this.other_ratio = temp_split_ratio;
 
 		}
 
@@ -1459,7 +1460,9 @@ UI.obj.declare('SplitView', function () {
 		handle_class_key: 'orientation',
 
 		dblclick: function (event) {
-			this.collapse(this.options.collapse);
+			if (this.options.collapse) {
+				this.collapse(this.options.collapse);
+			}
 		}
 	});
 
@@ -2652,7 +2655,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 		min_size: null,
 		max_size: null,
 		split_size: null,
-		split_side: null
+		invert_size: null
 	});
 
 
@@ -2664,7 +2667,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 
 
 		if (typeof this.options.split_size === 'number') {
-			this.setSplitSize(this.options.split_size, this.options.split_side);
+			this.setSplitSize(this.options.split_size, this.options.invert_size);
 
 			this.adapt();
 		}
@@ -2686,7 +2689,7 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 		}
 
 
-		this.setSplitSize(new_size, split_side);
+		this.setSplitSize(new_size, split_side || this.last_split_side);
 
 		this.adapt();
 
