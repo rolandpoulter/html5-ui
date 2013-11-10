@@ -4,7 +4,7 @@ UI.obj.declare('ContextMenu', UI.Menu, function () {
 
 	this.initialize = function () {
 
-		super_initialize.call(this)
+		super_initialize.call(this);
 
 
 		if (this.options.context) {

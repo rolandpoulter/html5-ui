@@ -17,7 +17,9 @@ module.exports = function (grunt) {
 					'src/index.js',
 					'src/obj.js',
 					'src/dom.js',
-					'src/menu.js', // Needs to come before context_menu.
+					'src/mix/**/*.js',
+					'src/split_view/ratio_base.js',
+					'src/menu.js',
 					'src/**/*.js'
 				],
       	dest: 'dist/<%= package.name %>-<%= package.version %>.js',

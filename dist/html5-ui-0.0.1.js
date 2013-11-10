@@ -7,7 +7,7 @@
 // UI is the namespace this toolkit uses.
 
 var UI = {
-	conflict: (typeof UI !== 'undefined') ? UI : undefined
+	conflict: (typeof UI !== 'undefined') ? UI : undefined,
 };
 
 
@@ -16,6 +16,11 @@ var UI = {
 if (typeof module !== 'undefined') {
 	module.exports = UI;
 }
+
+
+// Create namespace for mixin functions.
+
+UI.mix = {};
 
 
 // Make like UI was never loaded into the global namespace.
@@ -282,6 +287,19 @@ UI.obj.mixin = function (receiver) {
 	return receiver;
 
 };
+
+
+UI.obj.assertMix = function (object) {
+
+	var invalid = typeof global !== 'undefined' ? global : window;
+
+
+	if (object === UI.mix || object === invalid) {
+		throw new Error('Attempted to mix into an invalid object.');
+	}
+
+};
+
 
 // Utilities for DOM elements.
 
@@ -1023,6 +1041,498 @@ UI.dom.remove = function (element) {
 
 };
 
+UI.mix.resizeHandle = function (mix_options) {
+
+	UI.obj.assertMix(this);
+
+
+	mix_options = mix_options || {};
+
+
+	this.setupResizeHandle = function () {
+
+		var events = {
+			mousedown: this.attachResizeHandle.bind(this)
+		};
+
+		if (mix_options.dblclick) {
+			events.dblclick = mix_options.dblclick.bind(this);
+		}
+
+
+		this.resize_handle_element = UI.dom.create(UI.obj.mixin({
+			css: {position: 'absolute'},
+			names: 'resize-handle ' + this[mix_options.handle_class_key],
+			parent: this[mix_options.parent_element_key || 'element'],
+			events: events
+		}, this.options.resize_handle));
+
+
+		this.adaptResizeHandle();
+
+	};
+
+
+	this.removeResizeHandle = function () {
+
+		UI.dom.remove(this.resize_element);
+
+	};
+
+
+	this.attachResizeHandle = function (event) {
+
+		this.resize_handle_events = this.resize_handle_events || {
+			mousemove: this.updateResizeHandle.bind(this),
+			mouseup:   this.detachResizeHandle.bind(this)
+		};
+
+
+		UI.dom.events(document, this.resize_handle_events);
+
+		event.preventDefault();
+
+
+		this.resize_handle_state = {
+			startX: event.x,
+			startY: event.y
+		};
+
+
+		this.initialResizeHandleState(event);
+
+	};
+
+
+	this.updateResizeHandle = function (event) {
+
+		this.resize_handle_state.diffX = event.x - this.resize_handle_state.startX;
+
+		this.resize_handle_state.diffY = event.y - this.resize_handle_state.startY;
+
+
+		this.updateResizeHandleState(event);		
+
+
+		this.throttledAdapt();
+
+		event.preventDefault();
+
+	};
+
+
+	this.detachResizeHandle = function (event) {
+
+		this.deleteResizeHandleState(event);
+
+		delete this.resize_handle_state;
+
+
+		UI.dom.events.remove(document, this.resize_handle_events);
+
+		event.preventDefault();
+
+	};
+
+
+	this.adaptResizeHandle = function () {
+
+		// Adapt resize handle hook.
+
+	};
+
+
+	this.initialResizeHandleState = function (event) {
+
+		// Initial resize handle state hook.
+
+	};
+
+
+	this.updateResizeHandleState = function (event) {
+
+		// Update resize handle state hook.
+
+	};
+
+
+	this.deleteResizeHandleState = function (event) {
+
+		// Delete resize handle state hook.
+
+	};
+
+};
+
+UI.obj.declare('SplitView', function () {
+
+	this.default_options = {
+		element: {},
+		one: {},
+		two: {}, 
+		collapse: 'one',
+		auto_fill: true,
+		resizable: true,
+		min_ratio: 0,
+		max_ratio: 1,
+		auto_adapt: true,
+		split_ratio: 0.5,
+		orientation: 'vertical',
+		resize_handle: {},
+		resize_handle_size: 10
+	};
+
+
+	this.initialize = function () {
+
+		if (this.options.auto_adapt) {
+			this.setupAutoAdapter();
+		}
+
+
+		UI.dom.update(this.element, {
+			names: 'split-view',
+			css: {position: 'relative', overflow: 'hidden'}
+		});
+
+		this.element.split_view = this;
+
+
+		this.one_element = UI.dom.create(this.options.one);
+
+		this.two_element = UI.dom.create(this.options.two);
+
+
+		var split_element_update = {
+			parent: this.element,
+			names: 'split-view-pane',
+			css: {position: 'absolute'}
+		};
+
+
+		UI.dom.update(this.one_element, split_element_update);
+
+		UI.dom.update(this.two_element, split_element_update);
+
+
+		this.setOrientation(this.options.orientation);
+
+		this.setSplitRatio(this.options.split_ratio);
+
+
+		this.adapt();
+
+
+		if (this.options.resizable) {
+			this.setupResizeHandle();
+		}
+
+	};
+
+
+	this.remove = function () {
+
+		this.removeElement();
+
+		this.removeAutoAdapter();
+
+		this.removeResizeHandle();
+
+	};
+
+
+	Object.defineProperties(this, {
+		width: {
+			get: function () {
+
+				return this.element.clientWidth;
+
+			}
+		},
+		height: {
+			get: function () {
+
+				return this.element.clientHeight;
+
+			}
+		}
+	});
+
+
+	this.setupAutoAdapter = function () {
+
+		this.window_resize_events = this.window_resize_events || {
+			resize: this.throttledAdapt.bind(this)
+		};
+
+
+		UI.dom.events(window, this.window_resize_events);
+
+	};
+
+
+	this.removeAutoAdapter = function () {
+
+		if (this.window_resize_events) {
+			UI.dom.events.remove(window, this.window_resize_events);
+		}
+
+	};
+
+
+	this.throttledAdapt = function () {
+
+		if (this.adapt_wait) return;
+
+		this.adapt_wait = true;
+
+		setTimeout(function () {
+
+			this.adapt();
+
+			this.adapt_wait = false;
+
+		}.bind(this), 50);
+
+	};
+
+
+	this.collapse = function (split_side) {
+
+		var new_ratio = 0;
+
+		if (this.before_collapse === undefined) {
+			this.before_collapse = this.split_ratio;
+
+		} else {
+			new_ratio = this.before_collapse;
+
+			delete this.before_collapse;
+		}
+
+
+		this.setSplitRatio(new_ratio, split_side);
+
+		this.adapt();
+
+	};
+
+
+	this.setSplitRatio = function (split_ratio, split_side) {
+
+		this.split_ratio = Math.min(
+			Math.max(split_ratio, this.options.min_ratio),
+			Math.min(1, this.options.max_ratio)
+		);
+
+
+		this.other_ratio = 1.0 - split_ratio;
+
+
+		if (split_side === 'two' || split_side === true) {
+
+			var temp_split_ratio = this.split_ratio;
+
+			this.other_ratio = this.split_ratio;
+
+			this.split_ratio = this.other_ratio;
+
+		}
+
+	};
+
+
+	this.setOrientation = function (orientation) {
+
+		if (orientation === 'vertical') {
+
+			this.orientation = orientation;
+
+			this.size_getter = 'height';
+
+		}
+
+		else if (orientation === 'horizontal') {
+
+			this.orientation = orientation;
+
+			this.size_getter = 'width';
+
+		}
+
+	};
+
+
+	this.beforeAdapt = function () {
+
+		if (!this.one_element) return;
+
+
+		if (this.options.auto_fill && this.element.parentNode) {
+			if (this.element.parentNode === document.body) {
+				UI.dom.css(this.element, {
+					width: window.innerWidth + 'px',
+					height: window.innerHeight + 'px'
+				});
+			}
+
+			else {
+				UI.dom.css(this.element, {
+					width: this.element.parentNode.clientWidth + 'px',
+					height: this.element.parentNode.clientHeight + 'px'
+				});
+			}
+		}
+
+		return true;
+
+	};
+
+
+	this.adapt = function (non_recursive) {
+
+		if (!this.beforeAdapt()) return;
+
+
+		var one_update = {css: {}},
+		    two_update = {css: {}};
+
+
+		if (this.orientation === 'vertical') {
+			one_update.css.width =
+			two_update.css.width = this.width + 'px';
+
+			two_update.css.left = 0;
+
+			two_update.css.top =
+			one_update.css.height = Math.floor(this.height * this.split_ratio) + 'px';
+
+			two_update.css.height = Math.round(this.height * this.other_ratio) + 'px';
+		}
+
+		else {
+			one_update.css.height =
+			two_update.css.height = this.height + 'px';
+
+			two_update.css.top = 0;
+
+			two_update.css.left =
+			one_update.css.width = Math.floor(this.width * this.split_ratio) + 'px';
+
+			two_update.css.width = Math.round(this.width * this.other_ratio) + 'px';
+		}
+
+
+		UI.dom.update(this.one_element, one_update);
+
+		UI.dom.update(this.two_element, two_update);
+
+
+		this.adaptResizeHandle();
+
+
+		if (!non_recursive) {
+			this.adaptDecendants();
+		}
+
+	};
+
+
+	this.adaptDecendants = function () {
+
+		UI.dom.query('.split-view', this.element).forEach(function (child_split_view) {
+
+			if (child_split_view && child_split_view.split_view) {
+				child_split_view.split_view.adapt(true);
+			}
+
+		});
+
+	};
+
+
+	UI.mix.resizeHandle.call(this, {
+		parent_element_key: 'element',
+		handle_class_key: 'orientation',
+
+		dblclick: function (event) {
+			this.collapse(this.options.collapse);
+		}
+	});
+
+
+	this.adaptResizeHandle = function () {
+
+		if (!this.resize_handle_element) return;
+
+
+		var resize_update = {},
+		    resize_handle_size = this.options.resize_handle_size;
+
+
+		if (this.orientation === 'vertical') {
+			resize_update.css = {
+				top: Math.max(0, Math.round(this.height * this.split_ratio) - (resize_handle_size / 2)) + 'px',
+				left: 0,
+				width: this.width + 'px',
+				height: resize_handle_size + 'px'
+			};
+		}
+
+		else {
+			resize_update.css = {
+				top: 0,
+				left: Math.max(0, Math.round(this.width * this.split_ratio) - (resize_handle_size / 2)) + 'px',
+				width: resize_handle_size + 'px',
+				height: this.height + 'px'
+			};
+		}
+
+
+		UI.dom.update(this.resize_handle_element, resize_update);
+
+	};
+
+
+	this.initialResizeHandleState = function () {
+
+		this.resize_handle_state.resize_class = 'resize-' + this.orientation;
+
+		this.resize_handle_state.split_ratio = this.split_ratio;
+
+
+		this.element.classList.add(this.resize_handle_state.resize_class);
+
+	};
+
+
+	this.updateResizeHandleState = function () {
+
+		if (this.orientation === 'vertical') {
+			this.setSplitRatio(
+				this.resize_handle_state.split_ratio +
+				(this.resize_handle_state.diffY / this[this.size_getter])
+			);
+		}
+
+		else {
+			this.setSplitRatio(
+				this.resize_handle_state.split_ratio +
+				(this.resize_handle_state.diffX / this[this.size_getter])
+			);
+		}
+
+	};
+
+
+	this.deleteResizeHandleState = function () {
+
+		this.element.classList.remove(this.resize_handle_state.resize_class);
+
+	};
+
+});
+
 UI.obj.declare('Menu', function () {
 
 	this.default_options = {
@@ -1515,7 +2025,7 @@ UI.obj.declare('ContextMenu', UI.Menu, function () {
 
 	this.initialize = function () {
 
-		super_initialize.call(this)
+		super_initialize.call(this);
 
 
 		if (this.options.context) {
@@ -2133,67 +2643,20 @@ UI.obj.declare('Modal', function () {
 
 });
 
-UI.obj.declare('SplitView', function () {
+UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 
-	this.default_options = {
-		element: {},
-		one: {},
-		two: {},
-		collapse: 'one',
-		auto_fill: true,
-		resizable: true,
-		auto_adapt: true,
-		split_size: null,
-		split_ratio: 0.5,
-		orientation: 'vertical',
-		resize_handle: {},
-		resize_handle_size: 10
-	};
+	this.default_options = UI.obj.mixin({}, this.default_options, {
+		min_size: null,
+		max_size: null,
+		split_size: null
+	});
 
+
+	var super_initialize = this.initialize;
 
 	this.initialize = function () {
 
-		if (this.options.auto_adapt) {
-			this.setupAutoAdapter();
-		}
-
-
-		UI.dom.update(this.element, {
-			names: 'split-view',
-			css: {position: 'relative', overflow: 'hidden'}
-		});
-
-		this.element.split_view = this;
-
-
-		this.one_element = UI.dom.create(this.options.one);
-
-		this.two_element = UI.dom.create(this.options.two);
-
-
-		var split_element_update = {
-			parent: this.element,
-			names: 'split-view-pane',
-			css: {position: 'absolute'}
-		};
-
-
-		UI.dom.update(this.one_element, split_element_update);
-
-		UI.dom.update(this.two_element, split_element_update);
-
-
-		this.setOrientation(this.options.orientation);
-
-		this.setSplitRatio(this.options.split_ratio);
-
-
-		this.adapt();
-
-
-		if (this.options.resizable) {
-			this.setupResizeHandle();
-		}
+		super_initialize.call(this);
 
 
 		if (typeof this.options.split_size === 'number') {
@@ -2205,312 +2668,83 @@ UI.obj.declare('SplitView', function () {
 	};
 
 
-	this.remove = function () {
-
-		this.removeElement();
-
-		this.removeAutoAdapter();
-
-		this.removeResizeHandle();
-
-	};
-
-
-	this.throttledAdapt = function () {
-
-		if (this.adapt_wait) return;
-
-		this.adapt_wait = true;
-
-		setTimeout(function () {
-
-			this.adapt();
-
-			this.adapt_wait = false;
-
-		}.bind(this), 50);
-
-	};
-
-
-	this.setupAutoAdapter = function () {
-
-		UI.dom.events(window, this.window_resize_events = this.window_resize_events || {
-			resize: this.throttledAdapt.bind(this)
-		});
-
-	};
-
-
-	this.removeAutoAdapter = function () {
-
-		if (this.window_resize_events) {
-			UI.dom.events.remove(window, this.window_resize_events);
-		}
-
-	};
-
-
 	this.collapse = function (split_side) {
 
-		this.setSplitSize(0, split_side);
+		var new_size = 0;
+
+		if (this.before_collapse === undefined) {
+			this.before_collapse = this.last_split_size;
+
+		} else {
+			new_size = this.before_collapse;
+
+			delete this.before_collapse;
+		}
+
+
+		this.setSplitSize(new_size, split_side);
 
 		this.adapt();
 
 	};
 
 
-	this.setupResizeHandle = function () {
-
-		this.resize_element = UI.dom.create(UI.obj.mixin({
-			css: {position: 'absolute'},
-			names: 'resize-handle ' + this.orientation,
-			parent: this.element,
-			events: {
-				dblclick: this.collapse.bind(this, this.options.collapse),
-				mousedown: this.startResize.bind(this)
-			}
-		}, this.options.resize_handle));
-
-
-		this.adaptResizeHandle();
-
-	};
-
-
-	this.removeResizeHandle = function () {
-
-		UI.dom.remove(this.resize_element);
-
-	};
-
-
-	this.startResize = function (event) {
-
-		this.resize_state = {
-			resize_class: 'resize-' + this.orientation,
-			split_size: this[this.size_getter] * this.split_ratio,
-			startX: event.x,
-			startY: event.y
-		};
-
-		this.element.classList.add(this.resize_state.resize_class);
-
-		this.element.offsetWidth;
-
-
-		UI.dom.events(document, this.resize_events = this.resize_events || {
-			mouseup: this.stopResize.bind(this),
-			mousemove: this.dragResize.bind(this)
-		});
-
-		event.preventDefault();
-
-	};
-
-
-	this.dragResize = function (event) {
-
-		var diffX = event.x - this.resize_state.startX,
-		    diffY = event.y - this.resize_state.startY;
-
-
-		if (this.orientation === 'vertical') {
-			this.setSplitSize(this.resize_state.split_size + diffY);
-		}
-
-		else {
-			this.setSplitSize(this.resize_state.split_size + diffX);
-		}
-
-
-		this.throttledAdapt();
-
-		event.preventDefault();
-
-	};
-
-
-	this.stopResize = function (event) {
-
-		this.element.classList.remove(this.resize_state.resize_class);
-
-		delete this.resize_state;
-
-		UI.dom.events.remove(document, this.resize_events);
-
-		event.preventDefault();
-
-	};
-
-
-	Object.defineProperties(this, {
-		width: {
-			get: function () {
-
-				return this.element.clientWidth;
-
-			}
-		},
-		height: {
-			get: function () {
-
-				return this.element.clientHeight;
-
-			}
-		}
-	});
-
-
 	this.setSplitSize = function (client_size, split_side) {
-
-		// TODO: preserve the pixel size
 
 		var max_client_size = this[this.size_getter],
 		    split_ratio = client_size / max_client_size;
 
 
-		if (split_side === 'two' || split_side === true) {
-			split_ratio = 1.0 - split_ratio;
-		}
+		this.setSplitRatio(split_ratio, split_side);
 
 
-		this.setSplitRatio(split_ratio);
+		this.last_split_size = client_size;
 
-	};
-
-
-	this.setSplitRatio = function (split_ratio) {
-
-		this.split_ratio = Math.min(1, split_ratio);
-
-		this.other_ratio = 1 - split_ratio;
+		this.last_split_side = split_side;
 
 	};
 
 
-	this.setOrientation = function (orientation) {
+	var super_beforeAdapt = this.beforeAdapt;
 
-		if (orientation === 'vertical') {
+	this.beforeAdapt = function () {
 
-			this.orientation = orientation;
+		if (!super_beforeAdapt.call(this)) return;
 
-			this.size_getter = 'height';
+		this.setSplitSize(this.last_split_size, this.last_split_side);
 
-		}
-
-		else if (orientation === 'horizontal') {
-
-			this.orientation = orientation;
-
-			this.size_getter = 'width';
-
-		}
+		return true;
 
 	};
 
 
-	this.adapt = function (non_recursive) {
+	var super_initialResizeHandleState = this.initialResizeHandleState;
 
-		if (!this.one_element) return;
+	this.initialResizeHandleState = function (event) {
 
-
-		if (this.options.auto_fill && this.element.parentNode) {
-			if (this.element.parentNode === document.body) {
-				UI.dom.css(this.element, {
-					width: window.innerWidth + 'px',
-					height: window.innerHeight + 'px'
-				});
-			}
-
-			else {
-				UI.dom.css(this.element, {
-					width: this.element.parentNode.clientWidth + 'px',
-					height: this.element.parentNode.clientHeight + 'px'
-				});
-			}
-		}
+		this.resize_handle_state.split_size = this[this.size_getter] * this.split_ratio;
 
 
-		var one_update = {css: {}},
-		    two_update = {css: {}};
+		super_initialResizeHandleState.call(this, event);
 
+	};
+
+
+	this.updateResizeHandleState = function () {
 
 		if (this.orientation === 'vertical') {
-			one_update.css.width =
-			two_update.css.width = this.width + 'px';
-
-			two_update.css.left = 0;
-
-			two_update.css.top =
-			one_update.css.height = Math.floor(this.height * this.split_ratio) + 'px';
-
-			two_update.css.height = Math.round(this.height * this.other_ratio) + 'px';
+			this.setSplitSize(
+				this.resize_handle_state.split_size +
+				this.resize_handle_state.diffY
+			);
 		}
 
 		else {
-			one_update.css.height =
-			two_update.css.height = this.height + 'px';
-
-			two_update.css.top = 0;
-
-			two_update.css.left =
-			one_update.css.width = Math.floor(this.width * this.split_ratio) + 'px';
-
-			two_update.css.width = Math.round(this.width * this.other_ratio) + 'px';
+			this.setSplitSize(
+				this.resize_handle_state.split_size +
+				this.resize_handle_state.diffX
+			);
 		}
-
-
-		UI.dom.update(this.one_element, one_update);
-
-		UI.dom.update(this.two_element, two_update);
-
-
-		this.adaptResizeHandle();
-
-
-		if (non_recursive) return;
-
-		UI.dom.query('.split-view', this.element).forEach(function (child_split_view) {
-
-			if (child_split_view && child_split_view.split_view) {
-				child_split_view.split_view.adapt(true);
-			}
-
-		});
-
-	};
-
-
-	this.adaptResizeHandle = function () {
-
-		if (!this.resize_element) return;
-
-
-		var resize_update = {},
-		    handle_size = this.options.resize_handle_size;
-
-
-		if (this.orientation === 'vertical') {
-			resize_update.css = {
-				top: Math.max(0, Math.round(this.height * this.split_ratio) - (handle_size / 2)) + 'px',
-				left: 0,
-				width: this.width + 'px',
-				height: handle_size + 'px'
-			};
-		}
-
-		else {
-			resize_update.css = {
-				top: 0,
-				left: Math.max(0, Math.round(this.width * this.split_ratio) - (handle_size / 2)) + 'px',
-				width: handle_size + 'px',
-				height: this.height + 'px'
-			};
-		}
-
-
-		UI.dom.update(this.resize_element, resize_update);
 
 	};
 

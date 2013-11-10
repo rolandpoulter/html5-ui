@@ -239,3 +239,16 @@ UI.obj.mixin = function (receiver) {
 	return receiver;
 
 };
+
+
+UI.obj.assertMix = function (object) {
+
+	var invalid = typeof global !== 'undefined' ? global : window;
+
+
+	if (object === UI.mix || object === invalid) {
+		throw new Error('Attempted to mix into an invalid object.');
+	}
+
+};
+

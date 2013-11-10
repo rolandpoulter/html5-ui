@@ -7,7 +7,7 @@
 // UI is the namespace this toolkit uses.
 
 var UI = {
-	conflict: (typeof UI !== 'undefined') ? UI : undefined
+	conflict: (typeof UI !== 'undefined') ? UI : undefined,
 };
 
 
@@ -16,6 +16,11 @@ var UI = {
 if (typeof module !== 'undefined') {
 	module.exports = UI;
 }
+
+
+// Create namespace for mixin functions.
+
+UI.mix = {};
 
 
 // Make like UI was never loaded into the global namespace.

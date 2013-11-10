@@ -1,4 +1,4 @@
-var main_split = new UI.SplitView({
+var main_split = new UI.SplitViewInPixels({
 	element: page,
 	split_size: 100,
 	one: {attrs: {id: 'header'}},
