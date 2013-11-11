@@ -182,6 +182,13 @@ UI.obj.decorate = function (entity, decorator) {
 
 UI.obj.initialize = function (context, options) {
 
+	var invalid = typeof global !== 'undefined' ? global : window;
+
+	if (context === UI || context === invalid) {
+		throw new Error('Attempted to initialize a component without a new object.');
+	}
+
+
 	// Mixin the options object and any default options from the context
 	// into a new options object assigned to the context.
 
@@ -558,6 +565,12 @@ UI.dom.update = function (element, definition) {
 	if (attributes) {
 		UI.dom.attributes(element, attributes);
 	}
+
+
+	if (definition.id) {
+		UI.dom.attributes(element, {id: definition.id});
+	}
+
 
 	// Inline styles can be applied using a string, this is done
 	// before individual css attributes are applied.
@@ -1324,23 +1337,22 @@ UI.obj.declare('SplitView', function () {
 
 	this.setSplitRatio = function (split_ratio, split_side) {
 
-		this.split_ratio = Math.min(
-			Math.max(split_ratio, this.options.min_ratio),
-			Math.min(1, this.options.max_ratio)
-		);
+		this.split_ratio = split_ratio;
+
+		this.split_ratio = Math.min(this.options.max_ratio, this.split_ratio);
+
+		this.split_ratio = Math.max(this.options.min_ratio, this.split_ratio)
 
 
-		this.other_ratio = 1.0 - split_ratio;
+		this.other_ratio = 1.0 - this.split_ratio;
 
 
 		if (split_side === 'two' || split_side === true) {
-
 			var temp_split_ratio = this.split_ratio;
 
 			this.split_ratio = this.other_ratio;
 
 			this.other_ratio = temp_split_ratio;
-
 		}
 
 	};
@@ -2696,16 +2708,24 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 	};
 
 
-	this.setSplitSize = function (client_size, split_side) {
+	this.setSplitSize = function (pixel_size, split_side) {
 
-		var max_client_size = this[this.size_getter],
-		    split_ratio = client_size / max_client_size;
+		if (typeof this.options.max_size === 'number') {
+			pixel_size = Math.min(this.options.max_size, pixel_size);
+		}
+
+		if (typeof this.options.min_size === 'number') {
+			pixel_size = Math.max(this.options.min_size, pixel_size);
+		}
+
+		var max_pixel_size = this[this.size_getter],
+		    split_ratio = pixel_size / max_pixel_size;
 
 
 		this.setSplitRatio(split_ratio, split_side);
 
 
-		this.last_split_size = client_size;
+		this.last_split_size = pixel_size;
 
 		this.last_split_side = split_side;
 

@@ -154,23 +154,22 @@ UI.obj.declare('SplitView', function () {
 
 	this.setSplitRatio = function (split_ratio, split_side) {
 
-		this.split_ratio = Math.min(
-			Math.max(split_ratio, this.options.min_ratio),
-			Math.min(1, this.options.max_ratio)
-		);
+		this.split_ratio = split_ratio;
+
+		this.split_ratio = Math.min(this.options.max_ratio, this.split_ratio);
+
+		this.split_ratio = Math.max(this.options.min_ratio, this.split_ratio)
 
 
-		this.other_ratio = 1.0 - split_ratio;
+		this.other_ratio = 1.0 - this.split_ratio;
 
 
 		if (split_side === 'two' || split_side === true) {
-
 			var temp_split_ratio = this.split_ratio;
 
 			this.split_ratio = this.other_ratio;
 
 			this.other_ratio = temp_split_ratio;
-
 		}
 
 	};

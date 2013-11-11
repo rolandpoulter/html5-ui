@@ -1,10 +1,14 @@
 var main_split = new UI.SplitViewInPixels({
 	element: page,
 	split_size: 100,
+	min_size: 50,
+	max_size: 200,
 	one: {attrs: {id: 'header'}},
 	two: {
 		component: 'SplitView',
 		element: {attrs: {id: 'main'}},
+		min_ratio: 0.25,
+		max_ratio: 0.75,
 		orientation: 'horizontal',
 		one: {attrs: {id: 'left'}},
 		two: {attrs: {id: 'right'}}

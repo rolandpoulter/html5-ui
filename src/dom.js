@@ -256,6 +256,12 @@ UI.dom.update = function (element, definition) {
 		UI.dom.attributes(element, attributes);
 	}
 
+
+	if (definition.id) {
+		UI.dom.attributes(element, {id: definition.id});
+	}
+
+
 	// Inline styles can be applied using a string, this is done
 	// before individual css attributes are applied.
 

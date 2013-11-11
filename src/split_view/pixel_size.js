@@ -45,16 +45,24 @@ UI.obj.declare('SplitViewInPixels', UI.SplitView, function () {
 	};
 
 
-	this.setSplitSize = function (client_size, split_side) {
+	this.setSplitSize = function (pixel_size, split_side) {
 
-		var max_client_size = this[this.size_getter],
-		    split_ratio = client_size / max_client_size;
+		if (typeof this.options.max_size === 'number') {
+			pixel_size = Math.min(this.options.max_size, pixel_size);
+		}
+
+		if (typeof this.options.min_size === 'number') {
+			pixel_size = Math.max(this.options.min_size, pixel_size);
+		}
+
+		var max_pixel_size = this[this.size_getter],
+		    split_ratio = pixel_size / max_pixel_size;
 
 
 		this.setSplitRatio(split_ratio, split_side);
 
 
-		this.last_split_size = client_size;
+		this.last_split_size = pixel_size;
 
 		this.last_split_side = split_side;
 

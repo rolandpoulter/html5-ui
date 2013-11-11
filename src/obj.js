@@ -134,6 +134,13 @@ UI.obj.decorate = function (entity, decorator) {
 
 UI.obj.initialize = function (context, options) {
 
+	var invalid = typeof global !== 'undefined' ? global : window;
+
+	if (context === UI || context === invalid) {
+		throw new Error('Attempted to initialize a component without a new object.');
+	}
+
+
 	// Mixin the options object and any default options from the context
 	// into a new options object assigned to the context.
 
