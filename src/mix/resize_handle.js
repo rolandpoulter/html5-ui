@@ -45,6 +45,9 @@ UI.mix.resizeHandle = function (mix_options) {
 		};
 
 
+		this.resize_handle_element.classList.add('attached');
+
+
 		UI.dom.events(document, this.resize_handle_events);
 
 		event.preventDefault();
@@ -61,6 +64,23 @@ UI.mix.resizeHandle = function (mix_options) {
 	};
 
 
+	this.detachResizeHandle = function (event) {
+
+		this.resize_handle_element.classList.remove('attached');
+
+
+		this.deleteResizeHandleState(event);
+
+		delete this.resize_handle_state;
+
+
+		UI.dom.events.remove(document, this.resize_handle_events);
+
+		event.preventDefault();
+
+	};
+
+
 	this.updateResizeHandle = function (event) {
 
 		this.resize_handle_state.diffX = event.x - this.resize_handle_state.startX;
@@ -72,20 +92,6 @@ UI.mix.resizeHandle = function (mix_options) {
 
 
 		this.throttledAdapt();
-
-		event.preventDefault();
-
-	};
-
-
-	this.detachResizeHandle = function (event) {
-
-		this.deleteResizeHandleState(event);
-
-		delete this.resize_handle_state;
-
-
-		UI.dom.events.remove(document, this.resize_handle_events);
 
 		event.preventDefault();
 

@@ -1105,6 +1105,9 @@ UI.mix.resizeHandle = function (mix_options) {
 		};
 
 
+		this.resize_handle_element.classList.add('attached');
+
+
 		UI.dom.events(document, this.resize_handle_events);
 
 		event.preventDefault();
@@ -1121,6 +1124,23 @@ UI.mix.resizeHandle = function (mix_options) {
 	};
 
 
+	this.detachResizeHandle = function (event) {
+
+		this.resize_handle_element.classList.remove('attached');
+
+
+		this.deleteResizeHandleState(event);
+
+		delete this.resize_handle_state;
+
+
+		UI.dom.events.remove(document, this.resize_handle_events);
+
+		event.preventDefault();
+
+	};
+
+
 	this.updateResizeHandle = function (event) {
 
 		this.resize_handle_state.diffX = event.x - this.resize_handle_state.startX;
@@ -1132,20 +1152,6 @@ UI.mix.resizeHandle = function (mix_options) {
 
 
 		this.throttledAdapt();
-
-		event.preventDefault();
-
-	};
-
-
-	this.detachResizeHandle = function (event) {
-
-		this.deleteResizeHandleState(event);
-
-		delete this.resize_handle_state;
-
-
-		UI.dom.events.remove(document, this.resize_handle_events);
 
 		event.preventDefault();
 
@@ -1275,6 +1281,10 @@ UI.obj.declare('SplitView', function () {
 		}
 	});
 
+	function cleanNaN (number) {
+		return typeof number === 'number' && isFinite(number) ? number : 0;
+	}
+
 
 	this.setupAutoAdapter = function () {
 
@@ -1381,7 +1391,9 @@ UI.obj.declare('SplitView', function () {
 
 	this.beforeAdapt = function () {
 
-		if (!this.one_element) return;
+		if (!this.one_element || !this.two_element) return;
+
+		if (typeof this.split_ratio !== 'number') return;
 
 
 		if (this.options.auto_fill && this.element.parentNode) {
@@ -1456,10 +1468,16 @@ UI.obj.declare('SplitView', function () {
 
 	this.adaptDecendants = function () {
 
-		UI.dom.query('.split-view', this.element).forEach(function (child_split_view) {
+		var decendants = UI.dom.query('.split-view', this.element).map(function (split_view_element) {
 
-			if (child_split_view && child_split_view.split_view) {
-				child_split_view.split_view.adapt(true);
+			return split_view_element && split_view_element.split_view;
+
+		});
+
+		decendants.forEach(function (split_view) {
+
+			if (split_view) {
+				split_view.adapt(true);
 			}
 
 		});
@@ -1485,12 +1503,21 @@ UI.obj.declare('SplitView', function () {
 
 
 		var resize_update = {},
-		    resize_handle_size = this.options.resize_handle_size;
+		    resize_handle_size = this.options.resize_handle_size,
+		    resize_handle_classes = this.resize_handle_element.classList,
+		    position,
+		    max;
 
 
 		if (this.orientation === 'vertical') {
+			max = Math.max(0, this.height - resize_handle_size);
+
+			position = Math.round(this.height * this.split_ratio) - (resize_handle_size / 2);
+
+			position = Math.min(max, Math.max(0, position));
+
 			resize_update.css = {
-				top: Math.max(0, Math.round(this.height * this.split_ratio) - (resize_handle_size / 2)) + 'px',
+				top: position + 'px',
 				left: 0,
 				width: this.width + 'px',
 				height: resize_handle_size + 'px'
@@ -1498,12 +1525,29 @@ UI.obj.declare('SplitView', function () {
 		}
 
 		else {
+			max = Math.max(0, this.width - resize_handle_size);
+
+			position = Math.round(this.width * this.split_ratio) - (resize_handle_size / 2);
+
+			position = Math.min(max, Math.max(0, position));
+
 			resize_update.css = {
 				top: 0,
-				left: Math.max(0, Math.round(this.width * this.split_ratio) - (resize_handle_size / 2)) + 'px',
+				left: position + 'px',
 				width: resize_handle_size + 'px',
 				height: this.height + 'px'
 			};
+		}
+
+
+		if (isNaN(position)) return;
+
+		if (position === 0 || position === max) {
+			resize_handle_classes.add('collapsed');
+		}
+
+		else {
+			resize_handle_classes.remove('collapsed');
 		}
 
 

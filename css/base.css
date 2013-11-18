@@ -1,6 +1,10 @@
 .split-view {overflow: hidden;}
 .split-view-pane {overflow: auto;}
-.resize-handle {position: absolute; z-index: 1;}
+.resize-handle {position: absolute; z-index: 99; opacity: 0.2;}
+.resize-handle {background: transparent;}
+.resize-handle.collapsed {background: #ccc; border: 1px solid #000;}
+.resize-handle.attached,
+.resize-handle:hover {background: #ccc;}
 .split-view.resize-vertical,
 .resize-handle.vertical {cursor: row-resize !important;}
 .split-view.resize-horizontal,
